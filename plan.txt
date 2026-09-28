@@ -1,0 +1,34 @@
+chunker.py
+   ↓
+découpe les fichiers
+
+indexer.py
+   ↓
+crée BM25 / TF-IDF
+
+retriever.py
+   ↓
+cherche les chunks
+
+generator.py
+   ↓
+appelle Qwen
+
+evaluator.py
+   ↓
+calcule Recall@k
+
+cli.py
+   ↓
+relie tout
+
+
+--------------------------------
+
+
+
+BM25
+ +
+Embeddings
+ ↓
+Hybrid retrieval
