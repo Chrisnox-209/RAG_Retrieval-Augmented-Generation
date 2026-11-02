@@ -1,8 +1,9 @@
 from pathlib import Path
+from typing import Literal
 from src.models import SourceFile
 
 
-def get_file_type(path: Path) -> str | None:
+def get_file_type(path: Path) -> Literal['python', 'text'] | None:
     """Return the supported file type."""
 
     if path.suffix == ".py":
@@ -17,7 +18,7 @@ def get_file_type(path: Path) -> str | None:
 def parse_file(path: Path) -> SourceFile | None:
     """Read one supported source file."""
 
-    file_type: str | None = get_file_type(path)
+    file_type: Literal['python', 'text'] | None = get_file_type(path)
 
     if file_type is None:
         return None
@@ -47,7 +48,7 @@ def parse_directory(directory: str) -> list[SourceFile]:
         if not path.is_file():
             continue
 
-        source_file = parse_file(path)
+        source_file: SourceFile | None = parse_file(path)
 
         if source_file is not None:
             source_files.append(source_file)
