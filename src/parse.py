@@ -41,7 +41,7 @@ def parse_directory(directory: str) -> list[SourceFile]:
     source_files: list[SourceFile] = []
     root = Path(directory)
 
-    if not root.exists():
+    if not root.is_dir():
         return source_files
 
     for path in root.rglob("*"):
