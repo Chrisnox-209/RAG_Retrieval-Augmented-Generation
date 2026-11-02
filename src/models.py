@@ -8,3 +8,11 @@ class SourceFile(BaseModel):
     file_path: str
     content: str
     file_type: Literal["python", "text"]
+
+
+class ChunkModel(BaseModel):
+    file_path: str
+    content: str
+    first_character_index: int
+    last_character_index: int
+
