@@ -2,21 +2,22 @@ MYPY_FLAGS = --warn-return-any --warn-unused-ignores --ignore-missing-imports \
 --disallow-untyped-defs --check-untyped-defs
 MYPY_STRICT = --strict
 FLAKE_STRICT = --max-complexity=25
-MAIN = src/__main__.py
 
-.PHONY: install, run, clean, lint, lint-strict, debug
+
+.PHONY: all, install, run, clean, lint, lint-strict, debug
+
+all: run
 
 install:
 	@uv sync
 
 run:
-	@uv run python $(MAIN)
+	@uv run python -m src
 
 clean:
 	@rm -Rf .venv
 	@rm -Rf __pycache__
 	@rm -Rf .mypy_cache
-	@rm -Rf uv.lock
 	@echo "All code clean"
 
 lint:
