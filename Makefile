@@ -21,12 +21,12 @@ clean:
 	@echo "All code clean"
 
 lint:
-	@uv run python -m mypy . $(MYPY_FLAGS)
-	@uv run python -m flake8 --exclude .venv .
+	@uv run python -m mypy src $(MYPY_FLAGS)
+	@uv run python -m flake8 --exclude .venv src
 
 lint-strict:
-	@uv run python -m mypy .  $(MYPY_FLAGS) $(MYPY_STRICT)
-	@uv run python -m flake8 --exclude .venv . $(FLAKE_STRICT)
+	@uv run python -m mypy src  $(MYPY_FLAGS) $(MYPY_STRICT)
+	@uv run python -m flake8 --exclude .venv src $(FLAKE_STRICT)
 
 debug:
 	@uv run python -m pdb $(MAIN)
