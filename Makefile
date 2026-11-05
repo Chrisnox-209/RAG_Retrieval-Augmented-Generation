@@ -4,7 +4,7 @@ MYPY_STRICT = --strict
 FLAKE_STRICT = --max-complexity=25
 
 
-.PHONY: all, install, run, clean, lint, lint-strict, debug
+.PHONY: all, install, run, clean, lint, lint-strict, debug test
 
 all: run
 
@@ -14,6 +14,8 @@ install:
 run:
 	@uv run python -m src
 
+test:
+	@uv run python src/chunker.py
 clean:
 	@rm -Rf .venv
 	@rm -Rf __pycache__

@@ -1,3 +1,7 @@
+from langchain_core.documents.base import Document
+from langchain_text_splitters import MarkdownTextSplitter
+
+
 def chunk_markdown(chunk_size: int, chunk_overlap_percent: int, data: str
                    ) -> list[tuple[int, int]]:
     if chunk_overlap_percent < 0 or chunk_overlap_percent >= 100:
@@ -10,23 +14,28 @@ def chunk_markdown(chunk_size: int, chunk_overlap_percent: int, data: str
     if data == "":
         return []
 
-    if len(data) <= chunk_size:
-        return [(0, len(data))]
-
-    index_list: list[tuple[int, int]] = []
-    start_chunk: int = 0
     chunk_overlap = int(chunk_size * chunk_overlap_percent / 100)
 
-    while start_chunk < len(data):
+    splitter = MarkdownTextSplitter(
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap,
+        add_start_index=True,
+        strip_whitespace=False,
+        keep_separator=True,
+    )
 
-        end_chunk: int = min(start_chunk + chunk_size, len(data))
+    documents: list[Document] = splitter.create_documents([data])
 
-        index_list.append((start_chunk, end_chunk))
+    index_list: list[tuple[int, int]] = []
 
-        if end_chunk == len(data):
-            break
+    for document in documents:
+        start: int = document.metadata["start_index"]
+        end: int = start + len(document.page_content)
 
-        start_chunk = start_chunk + chunk_size - chunk_overlap
+        if data[start:end] != document.page_content:
+            raise ValueError("Chunk does not match the original text.")
+
+        index_list.append((start, end))
 
     return index_list
 
@@ -76,5 +85,3 @@ if __name__ == "__main__":
 
     data = "A Bonjour \n\ntout le monde"
     position = data.rfind("\n\n", 0, 15)
-
-    print(position)  # 1
