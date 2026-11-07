@@ -18,6 +18,7 @@ clean:
 	@rm -Rf .venv
 	@rm -Rf __pycache__
 	@rm -Rf .mypy_cache
+	@rm -Rf data/index
 	@echo "All code clean"
 
 lint:
