@@ -1,7 +1,8 @@
 from src.models import ChunkModel, SourceFile
 from src.parse import parse_directory
 from src.chunker import files_distribution
-from src.indexer import create_corpus, build_index, save_index, check_reusable
+from src.indexer import create_corpus, build_index, save_index
+from src.retriever import load_index, search
 from src.utils import Color
 from pathlib import Path
 from bm25s import BM25
@@ -55,12 +56,17 @@ def main() -> None:
 
     try:
         file_info: str = directory_info_index + "/" + file_info_index
-        check_reusable(file_info, directory_index)
+        retriever, chunk_info = load_index(file_info, directory_index)
     except Exception as error:
         print(f"{Color.RED.value}[ERROR]: "
               f"{Color.YELLOW.value}(reading_index) "
               f"{Color.RST.value}{error}")
         sys.exit(1)
+
+    list_dict_struct: list[dict[str, str | int | float]] = []
+    list_dict_struct = search(chunk_info, "KV cache", retriever, 5)
+
+    print(list_dict_struct)
 
 
 if __name__ == "__main__":

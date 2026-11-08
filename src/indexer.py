@@ -69,23 +69,3 @@ def save_index(directory_info: str,
             f"{Color.CYAN.value}[{path_file_info}]\n"
             f"{Color.ORANGE.value}{error}{Color.RST.value}"
         ) from error
-
-
-def check_reusable(file_info: str, directory_index: str) -> None:
-    retriever: bm25s.BM25 = bm25s.BM25.load(
-        directory_index,
-        load_corpus=True
-    )
-
-    with open(file_info, encoding="utf-8") as file:
-        chunk_info: list[dict[str, str | int]] = json.load(file)
-
-    if retriever.corpus is None:
-        raise ValueError(f"{Color.MAGENTA.value}Corpus not loaded"
-                         f"{Color.RST.value}")
-
-    if len(retriever.corpus) != len(chunk_info):
-        raise ValueError(f"{Color.MAGENTA.value}Corpus and metadata count"
-                         f"mismatch{Color.RST.value}")
-
-    print(f"Index loaded successfully: {len(chunk_info)} documents")
