@@ -1,7 +1,7 @@
 from src.models import ChunkModel, SourceFile
 from src.parse import parse_directory
 from src.chunker import files_distribution
-from src.indexer import create_corpus, build_index, save_index
+from src.indexer import create_corpus, build_index, save_index, check_reusable
 from src.utils import Color
 from pathlib import Path
 from bm25s import BM25
@@ -11,8 +11,9 @@ import sys
 def main() -> None:
     chunk_size: int = 2000
     chunk_overlap_percent: int = 15
-    directory_info_index = "data/index/info"
-    directory_index = "data/ko/bm25"
+    directory_info_index: str = "data/index/info"
+    file_info_index: str = "chunk_info.json"
+    directory_index: str = "data/index/bm25"
 
     list_chunk: list[ChunkModel] = []
     path = Path("./data/raw/vllm-0.10.1")
@@ -44,10 +45,20 @@ def main() -> None:
 
     try:
         save_index(directory_info_index, directory_index,
-                   retriever, corpus, chunk_info)
+                   file_info_index, retriever,
+                   corpus, chunk_info)
     except Exception as error:
         print(f"{Color.RED.value}[ERROR]: "
               f"{Color.YELLOW.value}(build_index) "
+              f"{Color.RST.value}{error}")
+        sys.exit(1)
+
+    try:
+        file_info: str = directory_info_index + "/" + file_info_index
+        check_reusable(file_info, directory_index)
+    except Exception as error:
+        print(f"{Color.RED.value}[ERROR]: "
+              f"{Color.YELLOW.value}(reading_index) "
               f"{Color.RST.value}{error}")
         sys.exit(1)
 
