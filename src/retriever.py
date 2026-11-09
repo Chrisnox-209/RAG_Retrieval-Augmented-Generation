@@ -32,6 +32,15 @@ def search(chunk_info: list[dict[str, str | int]], query: str,
            retriever: bm25s.BM25, k: int = 5
            ) -> list[dict[str, str | int | float]]:
 
+    if query.strip() == "":
+        raise ValueError(f"{Color.MAGENTA.value}No request has been entered."
+                         f"{Color.RST.value}")
+
+    if k <= 0 or k > len(chunk_info):
+        raise ValueError(f"{Color.MAGENTA.value}The value of k["
+                         f"{Color.CYAN.value}{k}{Color.MAGENTA.value}] "
+                         f"is not valid.{Color.RST.value}")
+
     query_tokens: List[List[str]] | Tokenized = bm25s.tokenize(query)
     docs: NDArray[np.object_]
     scores: NDArray[np.float32]
@@ -45,6 +54,13 @@ def search(chunk_info: list[dict[str, str | int]], query: str,
 
             dict_struct["text"] = dct["text"]
             dict_struct["score"] = float(scores[0][i])
+
+            if dct["id"] <= 0 or dct["id"] >= len(chunk_info):
+                raise ValueError(f"{Color.MAGENTA.value}Invalid BM25 document "
+                                 f"ID [{Color.CYAN.value}{dct['id']}"
+                                 f"{Color.MAGENTA.value}]. "
+                                 "Expected an ID between 0 and "
+                                 f"{len(chunk_info) - 1}.{Color.RST.value}")
 
             for key, values in chunk_info[dct["id"]].items():
                 if key == "path":

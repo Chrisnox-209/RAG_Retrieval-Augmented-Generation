@@ -3,6 +3,7 @@ from src.parse import parse_directory
 from src.chunker import files_distribution
 from src.indexer import create_corpus, build_index, save_index
 from src.retriever import load_index, search
+from src.tests import test_check_chunk_positions
 from src.utils import Color
 from pathlib import Path
 from bm25s import BM25
@@ -63,10 +64,26 @@ def main() -> None:
               f"{Color.RST.value}{error}")
         sys.exit(1)
 
-    list_dict_struct: list[dict[str, str | int | float]] = []
-    list_dict_struct = search(chunk_info, "KV cache", retriever, 5)
+    try:
+        list_dict_struct: list[dict[str, str | int | float]] = []
+        list_dict_struct = search(chunk_info, "test", retriever, 5)
+    except Exception as error:
+        print(f"{Color.RED.value}[ERROR]: "
+              f"{Color.YELLOW.value}(search_index) "
+              f"{Color.RST.value}{error}")
+        sys.exit(1)
 
-    print(list_dict_struct)
+    if test_check_chunk_positions(list_dict_struct):
+        print(f"{Color.GREEN.value}[VALID] {Color.BLUE.value}The retriever "
+              "returns correct paths and positions."
+              f"{Color.RST.value}")
+    else:
+        print(f"{Color.RED.value}[NOT VALID] {Color.BLUE.value}The retriever "
+              "does not correctly retrace paths or return to positions."
+              f"{Color.RST.value}")
+        sys.exit(1)
+
+    # print(list_dict_struct)
 
 
 if __name__ == "__main__":
