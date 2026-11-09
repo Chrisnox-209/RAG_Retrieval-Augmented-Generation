@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import Literal
+from src.utils import Color
 from src.models import SourceFile
 
 
@@ -42,7 +43,10 @@ def parse_directory(directory: str) -> list[SourceFile]:
     root = Path(directory)
 
     if not root.is_dir():
-        return source_files
+        raise NotADirectoryError(f"{Color.MAGENTA.value}The path["
+                                 f"{Color.CYAN.value}{root}"
+                                 f"{Color.MAGENTA.value}] "
+                                 f"is not a valid directory.{Color.RST.value}")
 
     for path in root.rglob("*"):
         if not path.is_file():
