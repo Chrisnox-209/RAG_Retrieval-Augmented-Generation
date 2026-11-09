@@ -10,16 +10,11 @@ from bm25s import BM25
 import sys
 
 
-def main() -> None:
-    chunk_size: int = 2000
-    chunk_overlap_percent: int = 15
-    directory_info_index: str = "data/index/info"
-    file_info_index: str = "chunk_info.json"
-    directory_index: str = "data/index/bm25"
-
-    list_chunk: list[ChunkModel] = []
-    path = Path("./data/raw/vllm-0.10.1")
-
+def run_indexation(path: Path, chunk_size: int, chunk_overlap_percent: int,
+                   directory_info_index: str,
+                   file_info_index: str,
+                   directory_index: str,
+                   ) -> tuple[BM25, list[dict[str, str | int]]]:
     try:
         files: list[SourceFile] = parse_directory(str(path))
         print(f"Recovered files : {len(files)}")
@@ -30,7 +25,8 @@ def main() -> None:
               f"{Color.RST.value}{error}")
         sys.exit(1)
 
-    list_chunk = files_distribution(files, chunk_size, chunk_overlap_percent)
+    list_chunk: list[ChunkModel] = files_distribution(files, chunk_size,
+                                                      chunk_overlap_percent)
 
     print(f"Generated chunks : {len(list_chunk)}")
 
@@ -55,6 +51,16 @@ def main() -> None:
               f"{Color.RST.value}{error}")
         sys.exit(1)
 
+    return retriever, chunk_info
+
+
+def run_search(directory_info_index: str, file_info_index: str,
+               directory_index: str, query: str, k: int
+               ) -> list[dict[str, str | int | float]]:
+
+    retriever: BM25
+    chunk_info: list[dict[str, str | int]] = []
+
     try:
         file_info: str = directory_info_index + "/" + file_info_index
         retriever, chunk_info = load_index(file_info, directory_index)
@@ -66,7 +72,7 @@ def main() -> None:
 
     try:
         list_dict_struct: list[dict[str, str | int | float]] = []
-        list_dict_struct = search(chunk_info, "test", retriever, 5)
+        list_dict_struct = search(chunk_info, query, retriever, k)
     except Exception as error:
         print(f"{Color.RED.value}[ERROR]: "
               f"{Color.YELLOW.value}(search_index) "
@@ -83,7 +89,31 @@ def main() -> None:
               f"{Color.RST.value}")
         sys.exit(1)
 
-    # print(list_dict_struct)
+    return list_dict_struct
+
+
+def main() -> None:
+    chunk_size: int = 2000
+    chunk_overlap_percent: int = 15
+    directory_info_index: str = "data/index/info"
+    file_info_index: str = "chunk_info.json"
+    directory_index: str = "data/index/bm25"
+    path = Path("./data/raw/vllm-0.10.1")
+
+    list_dict_struct: list[dict[str, str | int | float]] = []
+    query = "test edouard le goat"
+    k: int = 1
+    mode: str = "search"
+
+    if mode == "search":
+        list_dict_struct = run_search(directory_info_index, file_info_index,
+                                      directory_index, query, k)
+    elif mode == "index":
+        run_indexation(path, chunk_size, chunk_overlap_percent,
+                       directory_info_index, file_info_index,
+                       directory_index)
+
+    print(list_dict_struct)
 
 
 if __name__ == "__main__":
