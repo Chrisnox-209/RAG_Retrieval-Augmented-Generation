@@ -25,10 +25,16 @@ def run_indexation(path: Path, chunk_size: int, chunk_overlap_percent: int,
               f"{Color.RST.value}{error}")
         sys.exit(1)
 
-    list_chunk: list[ChunkModel] = files_distribution(files, chunk_size,
-                                                      chunk_overlap_percent)
-
-    print(f"Generated chunks : {len(list_chunk)}")
+    try:
+        list_chunk: list[ChunkModel] = files_distribution(
+            files, chunk_size,
+            chunk_overlap_percent)
+        print(f"Generated chunks : {len(list_chunk)}")
+    except Exception as error:
+        print(f"{Color.RED.value}[ERROR]: "
+              f"{Color.YELLOW.value}(chunking) "
+              f"{Color.RST.value}{error}")
+        sys.exit(1)
 
     try:
         chunk_info: list[dict[str, str | int]] = []
@@ -85,7 +91,7 @@ def run_search(directory_info_index: str, file_info_index: str,
               f"{Color.RST.value}")
     else:
         print(f"{Color.RED.value}[NOT VALID] {Color.BLUE.value}The retriever "
-              "does not correctly retrace paths or return to positions."
+              f"does not correctly retrace paths or return to positions."
               f"{Color.RST.value}")
         sys.exit(1)
 
