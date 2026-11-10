@@ -18,9 +18,8 @@ clean:
 	@rm -Rf .venv
 	@rm -Rf __pycache__
 	@rm -Rf .mypy_cache
-	@rm -Rf data/index
+	@find data -mindepth 1 -maxdepth 1 ! -name 'datasets' ! -name 'raw' -exec rm -rf -- {} +
 	@echo "All code clean"
-
 lint:
 	@uv run python -m mypy src $(MYPY_FLAGS)
 	@uv run python -m flake8 --exclude .venv src
