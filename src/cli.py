@@ -1,10 +1,10 @@
-from src.models import ChunkModel, SourceFile
+from src.models import ChunkModel, MinimalSource, SourceFile
 from src.parse import parse_directory
 from src.chunker import files_distribution
 from src.indexer import create_corpus, build_index, save_index
 from src.retriever import load_index, search
 from src.tests import test_check_chunk_positions
-from src.utils import Color
+from src.utils import Color, build_minimal_sources
 from pathlib import Path
 from bm25s import BM25
 import sys
@@ -61,8 +61,8 @@ def run_indexation(path: Path, chunk_size: int, chunk_overlap_percent: int,
 
 
 def run_search(directory_info_index: str, file_info_index: str,
-               directory_index: str, query: str, k: int
-               ) -> list[dict[str, str | int | float]]:
+               directory_index: str, query: str, k: int,
+               test: bool = False) -> list[dict[str, str | int | float]]:
 
     retriever: BM25
     chunk_info: list[dict[str, str | int]] = []
@@ -85,36 +85,49 @@ def run_search(directory_info_index: str, file_info_index: str,
               f"{Color.RST.value}{error}")
         sys.exit(1)
 
-    if test_check_chunk_positions(list_dict_struct):
-        print(f"{Color.GREEN.value}[VALID] {Color.BLUE.value}The retriever "
-              "returns correct paths and positions."
-              f"{Color.RST.value}")
-    else:
-        print(f"{Color.RED.value}[NOT VALID] {Color.BLUE.value}The retriever "
-              f"does not correctly retrace paths or return to positions."
-              f"{Color.RST.value}")
-        sys.exit(1)
+    if test:
+        if test_check_chunk_positions(list_dict_struct):
+            print(f"{Color.GREEN.value}[VALID] {Color.BLUE.value}The "
+                  "retriever returns correct paths and positions."
+                  f"{Color.RST.value}")
+        else:
+            print(f"{Color.RED.value}[NOT VALID] {Color.BLUE.value}The "
+                  f"retriever does not correctly retrace paths or return "
+                  f"to positions.{Color.RST.value}")
+            sys.exit(1)
 
     return list_dict_struct
 
 
-def start_search(query: str, k: int = 5) -> list[dict[str, str | int | float]]:
+def start_search(
+    query: str,
+    k: int = 5,
+    processed_directory: str = "data/processed",
+    test: bool = False
+) -> list[MinimalSource]:
 
-    directory_info_index: str = "data/processed/info"
+    directory_info_index: str = str(Path(processed_directory) / "info")
     file_info_index: str = "chunk_info.json"
-    directory_index: str = "data/processed/bm25"
+    directory_index: str = str(Path(processed_directory) / "bm25")
 
-    return run_search(
+    results: list[dict[str, str | int | float]] = run_search(
         directory_info_index,
         file_info_index,
         directory_index,
         query,
-        k
+        k,
+        test
     )
 
+    return build_minimal_sources(results)
 
-def start_indexation(max_chunk_size: int = 2000,
-                     chunk_overlap_percent: int = 15) -> None:
+
+def start_indexation(
+    max_chunk_size: int = 2000,
+    chunk_overlap_percent: int = 15,
+    source_path: str = "data/raw/vllm-0.10.1",
+    processed_directory: str = "data/processed"
+) -> None:
     """
     Build and save the BM25 index from the vLLM source files.
 
@@ -122,10 +135,10 @@ def start_indexation(max_chunk_size: int = 2000,
         max_chunk_size: Maximum number of characters per chunk.
         chunk_overlap_percent: Percentage of overlap between chunks.
     """
-    directory_info_index: str = "data/processed/info"
+    path: Path = Path(source_path)
+    directory_info_index: str = str(Path(processed_directory) / "info")
     file_info_index: str = "chunk_info.json"
-    directory_index: str = "data/processed/bm25"
-    path = Path("./data/raw/vllm-0.10.1")
+    directory_index: str = str(Path(processed_directory) / "bm25")
 
     run_indexation(path, max_chunk_size, chunk_overlap_percent,
                    directory_info_index, file_info_index,

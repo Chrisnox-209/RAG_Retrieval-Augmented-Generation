@@ -1,4 +1,5 @@
 from enum import Enum
+from src.models import MinimalSource
 
 
 class Color(Enum):
@@ -13,3 +14,20 @@ class Color(Enum):
     MAGENTA = "\033[1;95m"
     CYAN = "\033[1;96m"
     RST = "\033[0m"
+
+
+def build_minimal_sources(results: list[dict[str, str | int | float]]
+                          ) -> list[MinimalSource]:
+
+    lst_objects: list[MinimalSource] = []
+
+    for data in results:
+
+        object: MinimalSource = MinimalSource.model_validate({
+            "file_path": data["path"],
+            "first_character_index": data["first_index"],
+            "last_character_index": data["last_index"],
+        })
+        lst_objects.append(object)
+
+    return lst_objects

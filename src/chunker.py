@@ -3,6 +3,7 @@ from langchain_text_splitters import (MarkdownTextSplitter,
                                       PythonCodeTextSplitter)
 from src.models import SourceFile, ChunkModel
 from src.utils import Color
+from tqdm import tqdm
 from typing import Any
 
 
@@ -138,7 +139,7 @@ def files_distribution(files: list[SourceFile], chunk_size: int,
                        chunk_overlap_percent: int) -> list[ChunkModel]:
 
     list_chunk: list[ChunkModel] = []
-    for objet in files:
+    for objet in tqdm(files, desc="Chunking", unit="file"):
         result: list[ChunkModel] = chunk_file(objet.file_type,
                                               objet.file_path,
                                               objet.content,
