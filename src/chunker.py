@@ -93,11 +93,12 @@ def chunk_python(chunk_size: int, chunk_overlap_percent: int,
         end: int = start + len(document.page_content)
 
         if start < 0 or data[start:end] != document.page_content:
-            raise ValueError("Chunk does not match the original text.")
+            raise ValueError(f"{Color.MAGENTA.value}Chunk does not match the "
+                             f"original text.{Color.RST.value}")
 
         if not 0 <= start < end <= len(data):
-            raise ValueError("Invalid chunk positions.")
-
+            raise ValueError(f"{Color.MAGENTA.value}Invalid chunk positions."
+                             f"{Color.RST.value}")
         chunk = ChunkModel(
             file_path=path,
             content=data[start:end],
