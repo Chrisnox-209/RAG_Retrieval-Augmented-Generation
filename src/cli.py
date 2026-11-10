@@ -100,9 +100,9 @@ def run_search(directory_info_index: str, file_info_index: str,
 
 def start_search(query: str, k: int = 5) -> list[dict[str, str | int | float]]:
 
-    directory_info_index: str = "data/index/info"
+    directory_info_index: str = "data/processed/info"
     file_info_index: str = "chunk_info.json"
-    directory_index: str = "data/index/bm25"
+    directory_index: str = "data/processed/bm25"
 
     return run_search(
         directory_info_index,
@@ -122,9 +122,9 @@ def start_indexation(max_chunk_size: int = 2000,
         max_chunk_size: Maximum number of characters per chunk.
         chunk_overlap_percent: Percentage of overlap between chunks.
     """
-    directory_info_index: str = "data/index/info"
+    directory_info_index: str = "data/processed/info"
     file_info_index: str = "chunk_info.json"
-    directory_index: str = "data/index/bm25"
+    directory_index: str = "data/processed/bm25"
     path = Path("./data/raw/vllm-0.10.1")
 
     run_indexation(path, max_chunk_size, chunk_overlap_percent,
