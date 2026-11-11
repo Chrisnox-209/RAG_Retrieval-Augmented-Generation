@@ -55,7 +55,7 @@ def search(chunk_info: list[dict[str, str | int]], query: str,
             dict_struct["text"] = dct["text"]
             dict_struct["score"] = float(scores[0][i])
 
-            if dct["id"] <= 0 or dct["id"] >= len(chunk_info):
+            if dct["id"] < 0 or dct["id"] >= len(chunk_info):
                 raise ValueError(f"{Color.MAGENTA.value}Invalid BM25 document "
                                  f"ID [{Color.CYAN.value}{dct['id']}"
                                  f"{Color.MAGENTA.value}]. "
