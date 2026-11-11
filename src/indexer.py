@@ -20,10 +20,10 @@ def create_corpus(list_chunk: list[ChunkModel]
         chunk_info.append(info)
 
     if len(corpus) != len(chunk_info):
-        raise ValueError(f"{Color.MAGENTA.value}The number of chunks"
+        raise ValueError(f"{Color.MAGENTA.value}The number of chunk_info"
                          f"[{Color.CYAN.value}{len(chunk_info)}"
                          f"{Color.MAGENTA.value}] does not correspond "
-                         "to the generated corpus"
+                         "to the generated chunk"
                          f"[{Color.CYAN.value}{len(corpus)}"
                          f"{Color.MAGENTA.value}].{Color.RST.value}")
 
