@@ -18,7 +18,7 @@ def get_file_type(path: Path) -> Literal['python', 'text'] | None:
     return None
 
 
-def pare_dataset(file: str) -> RagDataset:
+def parse_dataset(file: str) -> RagDataset:
 
     try:
         with open(file, "r", encoding="utf-8") as content:
