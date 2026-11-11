@@ -139,7 +139,7 @@ def files_distribution(files: list[SourceFile], chunk_size: int,
                        chunk_overlap_percent: int) -> list[ChunkModel]:
 
     list_chunk: list[ChunkModel] = []
-    for objet in tqdm(files, desc="Chunking", unit="file"):
+    for objet in tqdm(files, desc="Chunking", unit="file", colour="blue"):
         result: list[ChunkModel] = chunk_file(objet.file_type,
                                               objet.file_path,
                                               objet.content,
