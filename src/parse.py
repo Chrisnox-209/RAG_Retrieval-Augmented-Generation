@@ -1,7 +1,9 @@
 from pathlib import Path
 from typing import Literal
 from src.utils import Color
-from src.models import SourceFile
+from src.models import (SourceFile, UnansweredQuestion,
+                        AnsweredQuestion, RagDataset)
+import json
 
 
 def get_file_type(path: Path) -> Literal['python', 'text'] | None:
@@ -14,6 +16,27 @@ def get_file_type(path: Path) -> Literal['python', 'text'] | None:
         return "text"
 
     return None
+
+
+def pare_dataset(file: str) -> RagDataset:
+
+    try:
+        with open(file, "r", encoding="utf-8") as content:
+            json_content: dict[str, list[dict[str, str]]] = json.load(content)
+
+    except FileNotFoundError:
+        raise ValueError(f"{Color.MAGENTA.value}The file ["
+                         f"{Color.CYAN.value}{file}{Color.MAGENTA.value}"
+                         f"{Color.CYAN.value}] cannot be found."
+                         f"{Color.RST.value}")
+
+    except json.JSONDecodeError:
+        raise ValueError(f"{Color.MAGENTA.value}The file ["
+                         f"{Color.CYAN.value}{file}{Color.MAGENTA.value}"
+                         f"{Color.CYAN.value}] content is not valid JSON."
+                         f"{Color.RST.value}")
+
+    return RagDataset.model_validate(json_content)
 
 
 def parse_file(path: Path) -> SourceFile | None:
