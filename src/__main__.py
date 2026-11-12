@@ -1,6 +1,6 @@
 
 from src.utils import Color
-from src.cli import start_search, start_indexation
+from src.cli import start_search, start_indexation, start_search_dataset
 import fire
 import sys
 
@@ -9,7 +9,8 @@ if __name__ == "__main__":
     try:
         fire.Fire({
             "index": start_indexation,
-            "search": start_search
+            "search": start_search,
+            "search_dataset": start_search_dataset
             })
 
     except Exception as error:

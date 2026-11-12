@@ -1,8 +1,7 @@
 from pathlib import Path
 from typing import Literal
 from src.utils import Color
-from src.models import (SourceFile, UnansweredQuestion,
-                        AnsweredQuestion, RagDataset)
+from src.models import (SourceFile, RagDataset)
 import json
 
 

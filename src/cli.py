@@ -1,5 +1,7 @@
-from src.models import ChunkModel, MinimalSource, SourceFile
-from src.parse import parse_directory
+from src.models import (ChunkModel, MinimalSource,
+                        SourceFile, RagDataset,
+                        MinimalSearchResults, StudentSearchResults)
+from src.parse import parse_directory, parse_dataset
 from src.chunker import files_distribution
 from src.indexer import create_corpus, build_index, save_index
 from src.retriever import load_index, search
@@ -77,8 +79,8 @@ def run_search(directory_info_index: str, file_info_index: str,
         sys.exit(1)
 
     try:
-        list_dict_struct: list[dict[str, str | int | float]] = []
-        list_dict_struct = search(chunk_info, query, retriever, k)
+        list_dict_struct: list[dict[str, str | int | float]] = search(
+            chunk_info, query, retriever, k)
     except Exception as error:
         print(f"{Color.RED.value}[ERROR]: "
               f"{Color.YELLOW.value}(search_index) "
@@ -97,6 +99,50 @@ def run_search(directory_info_index: str, file_info_index: str,
             sys.exit(1)
 
     return list_dict_struct
+
+
+def start_search_dataset(dataset_path: str, k: int) -> StudentSearchResults:
+    dataset: RagDataset = parse_dataset(dataset_path)
+    processed_directory: str = "data/processed"
+    directory_info_index: str = str(Path(processed_directory) / "info")
+    file_info_index: str = "chunk_info.json"
+    directory_index: str = str(Path(processed_directory) / "bm25")
+    lst_search_results: list[MinimalSearchResults] = []
+    retriever: BM25
+    chunk_info: list[dict[str, str | int]]
+
+    try:
+        file_info: str = directory_info_index + "/" + file_info_index
+        retriever, chunk_info = load_index(file_info, directory_index)
+    except Exception as error:
+        print(f"{Color.RED.value}[ERROR]: "
+              f"{Color.YELLOW.value}(reading_index) "
+              f"{Color.RST.value}{error}")
+        sys.exit(1)
+
+    for query in dataset.rag_questions:
+
+        try:
+            list_dict_struct: list[dict[str, str | int | float]] = search(
+                chunk_info, query.question, retriever, k)
+        except Exception as error:
+            print(f"{Color.RED.value}[ERROR]: "
+                  f"{Color.YELLOW.value}(search_index) "
+                  f"{Color.RST.value}{error}")
+            sys.exit(1)
+
+        search_results: MinimalSearchResults = MinimalSearchResults(
+            question_id=query.question_id,
+            question=query.question,
+            retrieved_sources=build_minimal_sources(list_dict_struct)
+        )
+
+        lst_search_results.append(search_results)
+    student_search_results: StudentSearchResults = StudentSearchResults(
+        search_results=lst_search_results,
+        k=k
+    )
+    return student_search_results
 
 
 def start_search(
