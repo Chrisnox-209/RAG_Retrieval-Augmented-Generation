@@ -101,7 +101,8 @@ def run_search(directory_info_index: str, file_info_index: str,
     return list_dict_struct
 
 
-def start_search_dataset(dataset_path: str, k: int) -> StudentSearchResults:
+def start_search_dataset(dataset_path: str, k: int, save_directory: str
+                         ) -> StudentSearchResults:
     dataset: RagDataset = parse_dataset(dataset_path)
     processed_directory: str = "data/processed"
     directory_info_index: str = str(Path(processed_directory) / "info")
@@ -142,7 +143,12 @@ def start_search_dataset(dataset_path: str, k: int) -> StudentSearchResults:
         search_results=lst_search_results,
         k=k
     )
-    return student_search_results
+    
+    file_path = Path(save_directory)
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+    file_path.write_text(student_search_results.model_dump_json(indent=2))
+    
+    # return student_search_results
 
 
 def start_search(
