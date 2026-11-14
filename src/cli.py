@@ -9,6 +9,7 @@ from src.tests import test_check_chunk_positions
 from src.utils import Color, build_minimal_sources
 from src.generator import build_context, generate_answer, load_model
 from transformers import PreTrainedTokenizerBase, PreTrainedModel
+import json
 from tqdm import tqdm
 from pathlib import Path
 from bm25s import BM25
@@ -107,7 +108,7 @@ def run_search(directory_info_index: str, file_info_index: str,
 def start_search_dataset(dataset_path: str, k: int = 5,
                          save_directory: str = (
                              "data/output/search_results/UnansweredQuestions")
-                         ) -> StudentSearchResults:
+                         ) -> None:
     dataset: RagDataset = parse_dataset(dataset_path)
     processed_directory: str = "data/processed"
     directory_info_index: str = str(Path(processed_directory) / "info")
@@ -159,14 +160,13 @@ def start_search_dataset(dataset_path: str, k: int = 5,
         student_search_results.model_dump_json(indent=2),
         encoding="utf-8"
     )
-    return student_search_results
 
 
-def answer_llm(query: str,
-               k: int = 5,
-               processed_directory: str = "data/processed",
-               test: bool = False,
-               llm: str = "Qwen/Qwen3-0.6B",) -> str:
+def answer(query: str,
+           k: int = 5,
+           processed_directory: str = "data/processed",
+           test: bool = False,
+           llm: str = "Qwen/Qwen3-0.6B",) -> str:
 
     top_sourcer: list[MinimalSource] = start_search(query,
                                                     k,
@@ -177,10 +177,36 @@ def answer_llm(query: str,
     tokenizer: PreTrainedTokenizerBase
     modele: PreTrainedModel
     tokenizer, modele = load_model(llm)
-    answer_llm = generate_answer(query, str_source, tokenizer, modele)
+    answer_llm: str = generate_answer(query, str_source, tokenizer, modele)
 
-    print("\n-------- answer_llm --------")
     return answer_llm
+
+
+def answer_dataset(
+    results_file: str = "data/output/search_results/UnansweredQuestions/dataset_code_public.json",
+    save_directory: str = (
+        "data/output/search_results_and_answer/UnansweredQuestions"
+    ),
+    llm: str = "Qwen/Qwen3-0.6B") -> StudentSearchResultsAndAnswer:
+
+    try:
+        with open(results_file, "r", encoding="utf-8") as c:
+            json_content: dict[str, list[dict[str, str]]] = json.load(c)
+
+    except FileNotFoundError:
+        raise ValueError(f"{Color.MAGENTA.value}The file ["
+                         f"{Color.CYAN.value}{results_file}"
+                         f"{Color.MAGENTA.value}{Color.CYAN.value}] cannot "
+                         f"be found.{Color.RST.value}")
+
+    except json.JSONDecodeError:
+        raise ValueError(f"{Color.MAGENTA.value}The file ["
+                         f"{Color.CYAN.value}{results_file}"
+                         f"{Color.MAGENTA.value}{Color.CYAN.value}] content "
+                         f"is not valid JSON.{Color.RST.value}")
+
+    object:StudentSearchResults = (
+        StudentSearchResults.model_validate_json(json_content))
 
 
 def start_search(
