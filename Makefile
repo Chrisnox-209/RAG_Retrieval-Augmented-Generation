@@ -32,4 +32,4 @@ lint-strict:
 	@uv run python -m flake8 --exclude .venv src $(FLAKE_STRICT)
 
 debug:
-	@uv run python -m pdb $(MAIN)
+	@uv run python -m pdb -m src
