@@ -9,6 +9,7 @@ from src.tests import test_check_chunk_positions
 from src.utils import Color, build_minimal_sources
 from src.generator import build_context, generate_answer, load_model
 from transformers import PreTrainedTokenizerBase, PreTrainedModel
+from tqdm import tqdm
 from pathlib import Path
 from bm25s import BM25
 import sys
@@ -125,7 +126,11 @@ def start_search_dataset(dataset_path: str, k: int = 5,
               f"{Color.RST.value}{error}")
         sys.exit(1)
 
-    for query in dataset.rag_questions:
+    for query in tqdm(dataset.rag_questions,
+                      desc="Searching",
+                      unit="question",
+                      colour="green",
+                      dynamic_ncols=True):
 
         try:
             list_dict_struct: list[dict[str, str | int | float]] = search(
