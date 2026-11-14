@@ -7,6 +7,8 @@ from src.indexer import create_corpus, build_index, save_index
 from src.retriever import load_index, search
 from src.tests import test_check_chunk_positions
 from src.utils import Color, build_minimal_sources
+from src.generator import build_context, generate_answer, load_model
+from transformers import PreTrainedTokenizerBase, PreTrainedModel
 from pathlib import Path
 from bm25s import BM25
 import sys
@@ -153,6 +155,27 @@ def start_search_dataset(dataset_path: str, k: int = 5,
         encoding="utf-8"
     )
     return student_search_results
+
+
+def answer_llm(query: str,
+               k: int = 5,
+               processed_directory: str = "data/processed",
+               test: bool = False,
+               llm: str = "Qwen/Qwen3-0.6B",) -> str:
+
+    top_sourcer: list[MinimalSource] = start_search(query,
+                                                    k,
+                                                    processed_directory,
+                                                    test)
+
+    str_source: str = build_context(top_sourcer)
+    tokenizer: PreTrainedTokenizerBase
+    modele: PreTrainedModel
+    tokenizer, modele = load_model(llm)
+    answer_llm = generate_answer(query, str_source, tokenizer, modele)
+
+    print("\n-------- answer_llm --------")
+    return answer_llm
 
 
 def start_search(

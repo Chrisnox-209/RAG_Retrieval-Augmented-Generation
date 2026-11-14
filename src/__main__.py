@@ -1,6 +1,9 @@
 
 from src.utils import Color
-from src.cli import start_search, start_indexation, start_search_dataset
+from src.cli import (start_search,
+                     start_indexation,
+                     start_search_dataset,
+                     answer_llm)
 from dotenv import load_dotenv
 import fire
 import sys
@@ -12,7 +15,8 @@ if __name__ == "__main__":
         fire.Fire({
             "index": start_indexation,
             "search": start_search,
-            "search_dataset": start_search_dataset
+            "search_dataset": start_search_dataset,
+            "answer": answer_llm
             })
 
     except Exception as error:
