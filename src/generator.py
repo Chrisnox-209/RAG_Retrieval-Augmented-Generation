@@ -1,6 +1,19 @@
+from transformers import (AutoTokenizer,
+                          AutoModelForCausalLM,
+                          PreTrainedTokenizerBase)
+from transformers.models.auto.modeling_auto import _BaseModelWithGenerate
 from src.models import MinimalSource
 from src.utils import Color
 from pathlib import Path
+
+
+llm: str = "Qwen/Qwen3-0.6B"
+
+tokenizer: PreTrainedTokenizerBase = AutoTokenizer.from_pretrained(llm)
+modele: _BaseModelWithGenerate = AutoModelForCausalLM.from_pretrained(
+    llm,
+    device_map="auto"
+)
 
 
 def extract_source_text(source: MinimalSource) -> str:
