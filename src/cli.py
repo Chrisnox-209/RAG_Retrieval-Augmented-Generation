@@ -9,10 +9,11 @@ from src.tests import test_check_chunk_positions
 from src.utils import Color, build_minimal_sources
 from src.generator import build_context, generate_answer, load_model
 from transformers import PreTrainedTokenizerBase, PreTrainedModel
-import json
+from typing import Any
 from tqdm import tqdm
 from pathlib import Path
 from bm25s import BM25
+import json
 import sys
 
 
@@ -183,31 +184,55 @@ def answer(query: str,
 
 
 def answer_dataset(
-    results_file: str = "data/output/search_results/UnansweredQuestions/dataset_code_public.json",
+    student_search_results_path: str = (
+        "data/output/search_results/UnansweredQuestions/dataset_code_public.json"),
     save_directory: str = (
         "data/output/search_results_and_answer/UnansweredQuestions"
     ),
-    llm: str = "Qwen/Qwen3-0.6B") -> StudentSearchResultsAndAnswer:
+    llm: str = "Qwen/Qwen3-0.6B") -> None:
 
     try:
-        with open(results_file, "r", encoding="utf-8") as c:
-            json_content: dict[str, list[dict[str, str]]] = json.load(c)
+        with open(student_search_results_path, "r", encoding="utf-8") as c:
+            json_content: dict[str, Any] = json.load(c)
 
     except FileNotFoundError:
         raise ValueError(f"{Color.MAGENTA.value}The file ["
-                         f"{Color.CYAN.value}{results_file}"
+                         f"{Color.CYAN.value}{student_search_results_path}"
                          f"{Color.MAGENTA.value}{Color.CYAN.value}] cannot "
                          f"be found.{Color.RST.value}")
 
     except json.JSONDecodeError:
         raise ValueError(f"{Color.MAGENTA.value}The file ["
-                         f"{Color.CYAN.value}{results_file}"
+                         f"{Color.CYAN.value}{student_search_results_path}"
                          f"{Color.MAGENTA.value}{Color.CYAN.value}] content "
                          f"is not valid JSON.{Color.RST.value}")
 
-    object:StudentSearchResults = (
-        StudentSearchResults.model_validate_json(json_content))
+    student_results: StudentSearchResults = (
+    StudentSearchResults.model_validate(json_content)
+    )
 
+    # student_results.search_results  # Liste des questions et des sources
+    # student_results.k               # Nombre de sources par question
+
+    print(len(student_results.search_results))
+    print(student_results.search_results[0].question)
+
+    tokenizer: PreTrainedTokenizerBase
+    modele: PreTrainedModel
+    tokenizer, modele = load_model(llm)
+
+    for data in range(len(student_results.search_results)):
+        answer_llm: str = generate_answer(data.question, data.retrieved_sources, tokenizer, modele)
+        
+    # il faut extraire les moceaux de chunk dans les fichiers pour les donner a generate_answer
+    print(answer_llm)
+        
+
+
+
+    #     answer_llm: str = generate_answer(query, str_source, tokenizer, modele)
+
+# answer_llm: str = generate_answer(query, str_source, tokenizer, modele)    
 
 def start_search(
     query: str,
