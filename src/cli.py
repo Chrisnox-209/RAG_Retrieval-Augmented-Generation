@@ -199,13 +199,13 @@ def answer_dataset(
     except FileNotFoundError:
         raise ValueError(f"{Color.MAGENTA.value}The file ["
                          f"{Color.CYAN.value}{student_search_results_path}"
-                         f"{Color.MAGENTA.value}{Color.CYAN.value}] cannot "
+                         f"{Color.MAGENTA.value}] cannot "
                          f"be found.{Color.RST.value}")
 
     except json.JSONDecodeError:
         raise ValueError(f"{Color.MAGENTA.value}The file ["
                          f"{Color.CYAN.value}{student_search_results_path}"
-                         f"{Color.MAGENTA.value}{Color.CYAN.value}] content "
+                         f"{Color.MAGENTA.value}] content "
                          f"is not valid JSON.{Color.RST.value}")
 
     student_results: StudentSearchResults = (
