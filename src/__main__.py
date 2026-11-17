@@ -1,5 +1,6 @@
 
 from src.utils import Color
+from src.evaluator import evaluate
 from src.cli import (start_search,
                      start_indexation,
                      start_search_dataset,
@@ -19,6 +20,7 @@ if __name__ == "__main__":
             "search_dataset": start_search_dataset,
             "answer": answer,
             "answer_dataset": answer_dataset,
+            "evaluate": evaluate,
             })
 
     except Exception as error:

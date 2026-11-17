@@ -4,7 +4,7 @@ MYPY_STRICT = --strict
 FLAKE_STRICT = --max-complexity=25
 
 
-.PHONY: all install run clean lint lint-strict debug index search moulinette full
+.PHONY: all install run clean lint lint-strict debug index search moulinette full evaluate
 
 all: run
 
@@ -36,7 +36,7 @@ debug:
 
 
 # ### index
-K = 10
+K = 5
 max_chunk_size = 2000
 chunk_overlap_percent = 33
 source_path = data/raw/vllm-0.10.1
@@ -52,6 +52,12 @@ moulinette_path_docs = data/output/search_results/UnansweredQuestions/dataset_do
 moulinette_path_code = data/output/search_results/UnansweredQuestions/dataset_code_public.json 
 moulinette_dataset_docs = data/datasets/AnsweredQuestions/dataset_docs_public.json
 moulinette_dataset_code = data/datasets/AnsweredQuestions/dataset_code_public.json
+
+# ### answer
+student_search_results_path_docs = data/output/search_results/UnansweredQuestions/dataset_docs_public.json
+student_search_results_path_code = data/output/search_results/UnansweredQuestions/dataset_code_public.json
+save_directory = data/output/search_results_and_answer/UnansweredQuestions
+
 
 index:
 	@uv run python3 -m src index \
@@ -86,6 +92,13 @@ moulinette:
 		--max_context_length ${max_chunk_size}
 
 answer:
-	@uv run python3 -m src answer_dataset
+	@uv run python3 -m src answer_dataset \
+		--student_search_results_path $(student_search_results_path_docs) \
+		--save_directory $(save_directory)
+
+evaluate:
+	@uv run python3 -m src evaluator \
+		--student_search_results_path $(student_search_results_path_docs) \
+		--dataset_path $(moulinette_dataset_code)
 
 full: index search moulinette
