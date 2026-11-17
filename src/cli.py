@@ -1,6 +1,7 @@
 from src.models import (ChunkModel, MinimalSource,
                         SourceFile, RagDataset,
-                        MinimalSearchResults, StudentSearchResults)
+                        MinimalSearchResults, StudentSearchResults,
+                        MinimalAnswer, StudentSearchResultsAndAnswer)
 from src.parse import parse_directory, parse_dataset
 from src.chunker import files_distribution
 from src.indexer import create_corpus, build_index, save_index
@@ -184,12 +185,12 @@ def answer(query: str,
 
 
 def answer_dataset(
-    student_search_results_path: str = (
-        "data/output/search_results/UnansweredQuestions/dataset_code_public.json"),
-    save_directory: str = (
-        "data/output/search_results_and_answer/UnansweredQuestions"
-    ),
-    llm: str = "Qwen/Qwen3-0.6B") -> None:
+        student_search_results_path: str = (
+            "data/output/search_results/UnansweredQuestions/"
+            "dataset_code_public.json"),
+        save_directory: str = (
+            "data/output/search_results_and_answer/UnansweredQuestions"
+        ), llm: str = "Qwen/Qwen3-0.6B") -> None:
 
     try:
         with open(student_search_results_path, "r", encoding="utf-8") as c:
@@ -208,11 +209,7 @@ def answer_dataset(
                          f"is not valid JSON.{Color.RST.value}")
 
     student_results: StudentSearchResults = (
-    StudentSearchResults.model_validate(json_content)
-    )
-
-    # student_results.search_results  # Liste des questions et des sources
-    # student_results.k               # Nombre de sources par question
+        StudentSearchResults.model_validate(json_content))
 
     print(len(student_results.search_results))
     print(student_results.search_results[0].question)
@@ -221,18 +218,46 @@ def answer_dataset(
     modele: PreTrainedModel
     tokenizer, modele = load_model(llm)
 
-    for data in range(len(student_results.search_results)):
-        answer_llm: str = generate_answer(data.question, data.retrieved_sources, tokenizer, modele)
-        
-    # il faut extraire les moceaux de chunk dans les fichiers pour les donner a generate_answer
-    print(answer_llm)
-        
+    lst_answers: list[MinimalAnswer] = []
 
+    for data in tqdm(student_results.search_results,
+                     desc="Generating answers",
+                     unit="question",
+                     colour="red",
+                     dynamic_ncols=True):
 
+        sources: str = build_context(data.retrieved_sources)
+        answer_llm: str = generate_answer(data.question,
+                                          sources,
+                                          tokenizer,
+                                          modele)
 
-    #     answer_llm: str = generate_answer(query, str_source, tokenizer, modele)
+        # print(f"{Color.GREEN.value}[Reponse LLM]: "
+        #       f"{Color.RST.value}{answer_llm}")
 
-# answer_llm: str = generate_answer(query, str_source, tokenizer, modele)    
+        result: MinimalAnswer = MinimalAnswer(
+            question_id=data.question_id,
+            question=data.question,
+            retrieved_sources=data.retrieved_sources,
+            answer=answer_llm
+        )
+        lst_answers.append(result)
+
+    student_answers: StudentSearchResultsAndAnswer = (
+        StudentSearchResultsAndAnswer(
+            search_results=lst_answers,
+            k=student_results.k))
+
+    file_path: Path = (
+        Path(save_directory) / Path(student_search_results_path).name)
+
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+
+    file_path.write_text(
+        student_answers.model_dump_json(indent=2),
+        encoding="utf-8"
+    )
+
 
 def start_search(
     query: str,
