@@ -45,9 +45,9 @@ processed_directory = data/processed
 # ### search
 dataset_path_docs = data/datasets/UnansweredQuestions/dataset_docs_public.json
 dataset_path_code = data/datasets/UnansweredQuestions/dataset_code_public.json
-save_directory = data/output/search_results/UnansweredQuestions
+save_directory_search = data/output/search_results/UnansweredQuestions
 
-# ### moulinette
+# ### moulinette && evaluate
 moulinette_path_docs = data/output/search_results/UnansweredQuestions/dataset_docs_public.json 
 moulinette_path_code = data/output/search_results/UnansweredQuestions/dataset_code_public.json 
 moulinette_dataset_docs = data/datasets/AnsweredQuestions/dataset_docs_public.json
@@ -70,11 +70,11 @@ search:
 	@uv run python3 -m src search_dataset \
 		--dataset_path $(dataset_path_docs) \
 		--k $(K) \
-		--save_directory $(save_directory)
+		--save_directory $(save_directory_search)
 	@uv run python3 -m src search_dataset \
 		--dataset_path $(dataset_path_code) \
 		--k $(K) \
-		--save_directory $(save_directory)
+		--save_directory $(save_directory_search)
 
 moulinette:
 	@echo "\n====== DOCS ======"
@@ -97,8 +97,8 @@ answer:
 		--save_directory $(save_directory)
 
 evaluate:
-	@uv run python3 -m src evaluator \
-		--student_search_results_path $(student_search_results_path_docs) \
-		--dataset_path $(moulinette_dataset_code)
+	@uv run python3 -m src evaluate \
+		--student_search_results_path $(moulinette_path_docs) \
+		--dataset_path $(moulinette_dataset_docs)
 
 full: index search moulinette
