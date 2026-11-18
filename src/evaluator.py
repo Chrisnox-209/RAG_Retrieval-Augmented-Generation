@@ -44,4 +44,12 @@ def evaluate(student_search_results_path: str, dataset_path: str) -> None:
     dataset: RagDataset = (
         RagDataset.model_validate(json_dataset))
 
-    print(dataset)
+# faire une fonction pour trouver la question 
+    for results in student_results.search_results:
+        for data in dataset.rag_questions:
+            if results.question_id == data.question_id:
+                for src_result in results.retrieved_sources:
+                    print(src_result)
+            
+        
+    
