@@ -1,7 +1,56 @@
-from src.models import StudentSearchResults, RagDataset
+from src.models import (StudentSearchResults, RagDataset,
+                        AnsweredQuestion, MinimalSource)
 from src.utils import Color
-from typing import Any
+from typing import Any, Literal
 import json
+
+
+def calculate_iou(start_dataset: int, end_dataset: int,
+                  start_result: int, end_result: int) -> float:
+
+    intersection_start: int = max(start_dataset, start_result)
+    intersection_end: int = min(end_dataset, end_result)
+    intersection: int = intersection_end - intersection_start
+
+    if intersection <= 0:
+        return 0.0
+
+    size_a: int = end_dataset - start_dataset
+    size_b: int = end_result - start_result
+    union: int = size_a + size_b - intersection
+
+    iou: float = intersection / union
+    return iou
+
+
+def check_query(query_result: str,
+                dataset: RagDataset) -> str | Literal[False]:
+    for data in dataset.rag_questions:
+        if query_result == data.question_id:
+            return data.question_id
+    return False
+
+
+def check_path(question_id: str, results_sources: list[MinimalSource],
+               dataset: RagDataset) -> bool:
+
+    for result in results_sources:
+        for data in dataset.rag_questions:
+            if (data.question_id == question_id
+               and isinstance(data, AnsweredQuestion)):
+
+                for data_set in data.sources:
+                    if result.file_path == data_set.file_path:
+
+                        iou: float = calculate_iou(
+                            data_set.first_character_index,
+                            data_set.last_character_index,
+                            result.first_character_index,
+                            result.last_character_index,)
+
+                        if iou >= 0.05:
+                            return True
+    return False
 
 
 def evaluate(student_search_results_path: str, dataset_path: str) -> None:
@@ -44,12 +93,21 @@ def evaluate(student_search_results_path: str, dataset_path: str) -> None:
     dataset: RagDataset = (
         RagDataset.model_validate(json_dataset))
 
-# faire une fonction pour trouver la question 
+    for data in dataset.rag_questions:
+        if not isinstance(data, AnsweredQuestion):
+            raise ValueError(
+                f"{Color.MAGENTA.value}The file ["
+                f"{Color.CYAN.value}{dataset_path}"
+                f"{Color.MAGENTA.value}] is not of the ["
+                f"{Color.CYAN.value}AnsweredQuestion"
+                f"{Color.MAGENTA.value}] type{Color.RST.value}")
+
+    score: int = 0
     for results in student_results.search_results:
-        for data in dataset.rag_questions:
-            if results.question_id == data.question_id:
-                for src_result in results.retrieved_sources:
-                    print(src_result)
-            
-        
-    
+        id: str | Literal[False] = check_query(results.question_id, dataset)
+        if id is not False:
+            if results.question_id == id:
+                if check_path(results.question_id, results.retrieved_sources,
+                              dataset):
+                    score += 1
+    print(score)
