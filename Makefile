@@ -96,9 +96,16 @@ answer:
 		--student_search_results_path $(student_search_results_path_docs) \
 		--save_directory $(save_directory)
 
+	@uv run python3 -m src answer_dataset \
+		--student_search_results_path $(student_search_results_path_code) \
+		--save_directory $(save_directory)
 evaluate:
 	@uv run python3 -m src evaluate \
 		--student_search_results_path $(moulinette_path_docs) \
 		--dataset_path $(moulinette_dataset_docs)
+
+	@uv run python3 -m src evaluate \
+		--student_search_results_path $(moulinette_path_code) \
+		--dataset_path $(moulinette_dataset_code)
 
 full: index search moulinette
