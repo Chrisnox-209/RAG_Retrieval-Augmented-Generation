@@ -32,8 +32,10 @@ def check_query(query_result: str,
 
 
 def check_path(question_id: str, results_sources: list[MinimalSource],
-               dataset: RagDataset) -> bool:
+               dataset: RagDataset) -> tuple[int, int]:
 
+    i: int = 0
+    j: int = 0
     for result in results_sources:
         for data in dataset.rag_questions:
             if (data.question_id == question_id
@@ -49,8 +51,9 @@ def check_path(question_id: str, results_sources: list[MinimalSource],
                             result.last_character_index,)
 
                         if iou >= 0.05:
-                            return True
-    return False
+                            i += 1
+                    j += 1
+    return i, j
 
 
 def evaluate(student_search_results_path: str, dataset_path: str) -> None:
@@ -92,7 +95,7 @@ def evaluate(student_search_results_path: str, dataset_path: str) -> None:
 
     dataset: RagDataset = (
         RagDataset.model_validate(json_dataset))
-
+    
     for data in dataset.rag_questions:
         if not isinstance(data, AnsweredQuestion):
             raise ValueError(
@@ -103,11 +106,18 @@ def evaluate(student_search_results_path: str, dataset_path: str) -> None:
                 f"{Color.MAGENTA.value}] type{Color.RST.value}")
 
     score: int = 0
+    total = 0
+    point: int
+    j: int
     for results in student_results.search_results:
         id: str | Literal[False] = check_query(results.question_id, dataset)
         if id is not False:
             if results.question_id == id:
-                if check_path(results.question_id, results.retrieved_sources,
-                              dataset):
-                    score += 1
-    print(score)
+                point = 0
+                j = 0
+                point, j = check_path(results.question_id, results.retrieved_sources, dataset)
+                score += point
+                total += j
+    print(f"[{score}, {total}]")
+    last_total: float = (score * 100) / total
+    print(f"{last_total:.2f}")
