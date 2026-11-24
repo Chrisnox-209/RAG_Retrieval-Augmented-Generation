@@ -65,9 +65,17 @@ def generate_answer(
     tokenizer: PreTrainedTokenizerBase, modele: PreTrainedModel
 ) -> str:
 
-    pre_prompt: str = ("You are an assistant answering questions about "
-                       "the vLLM codebase. Answer using the provided context. "
-                       "If the context is insufficient, say so.")
+    pre_prompt: str = (
+        "You are a technical assistant specialized in the vLLM codebase.\n"
+        "Answer the question based on the provided context.\n"
+        "Read all sources carefully before answering.\n"
+        "Preserve exact function names, parameters, types and values.\n"
+        "Provide a concise but complete answer in English.\n"
+        "Do not guess or invent information.\n"
+        "If only part of the answer is available, provide that part.\n"
+        "If no relevant information is available, answer: "
+        "'Insufficient information in the provided context.'"
+    )
 
     prompt: list[dict[str, str]] = [
         {
