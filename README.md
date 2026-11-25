@@ -101,13 +101,13 @@ Run commands from the repository root. Relative paths such as `data/raw/vllm-0.1
 | `make debug` | Start the module with Python's pdb debugger. |
 | `make lint` | Run mypy with the required flags and flake8 on `src/`. |
 | `make lint-strict` | Run stricter static checks on `src/`. |
-| `make clean` | Remove the virtual environment, selected caches, processed data and outputs; preserve `data/raw/` and `data/datasets/`. |
+| `make clean` | Remove the caches, processed data and outputs; preserve `data/raw/` and `data/datasets/`. |
 | `make index` | Build the index (2,000 characters and 33% overlap by default in the Makefile). |
 | `make search` | Search both public unanswered datasets (default `K=5`). |
 | `make evaluate` | Run the internal evaluator on both public datasets. |
 | `make moulinette` | Run the supplied Ubuntu evaluator on both public datasets. |
 | `make answer` | Generate answers for both public search-result files. |
-| `make full` | Run indexing, batch retrieval and external evaluation; does not generate answers. |
+| `make full` | Run indexing, batch retrieval and evaluation, and generate the answers. |
 
 The `moulinette-ubuntu` executable must be supplied separately at the repository root for the corresponding Makefile target. The external evaluator is not imported or invoked by the Python implementation.
 

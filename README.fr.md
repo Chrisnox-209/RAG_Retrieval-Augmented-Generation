@@ -101,13 +101,13 @@ Exécuter les commandes depuis la racine du dépôt. Les chemins relatifs, par e
 | `make debug` | Lancer le module avec le débogueur pdb. |
 | `make lint` | Exécuter mypy avec les options requises et flake8 sur `src/`. |
 | `make lint-strict` | Exécuter les vérifications statiques renforcées sur `src/`. |
-| `make clean` | Supprimer l'environnement virtuel, certains caches, l'index et les résultats ; conserver `data/raw/` et `data/datasets/`. |
+| `make clean` | Suppression caches, l'index et les résultats ; conserver `data/raw/` et `data/datasets/`. |
 | `make index` | Construire l'index (2 000 caractères et 33 % de recouvrement par défaut dans le Makefile). |
 | `make search` | Rechercher sur les deux datasets publics sans réponses (`K=5` par défaut). |
 | `make evaluate` | Lancer l'évaluateur interne sur les deux datasets publics. |
 | `make moulinette` | Lancer la moulinette Ubuntu fournie sur les deux datasets publics. |
 | `make answer` | Générer les réponses pour les deux fichiers de résultats publics. |
-| `make full` | Enchaîner indexation, recherche par lots et évaluation externe ; ne génère pas les réponses. |
+| `make full` | Enchaîner indexation, recherche par lots et l'évaluation et générer les réponses. |
 
 Pour la cible correspondante, placer l'exécutable `moulinette-ubuntu`, fourni séparément, à la racine du projet. L'évaluateur externe n'est ni importé ni invoqué par l'implémentation Python.
 
