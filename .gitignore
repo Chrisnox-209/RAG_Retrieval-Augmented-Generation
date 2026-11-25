@@ -9,3 +9,15 @@ __pycache__/
 *.pdf
 .vscode/
 .env
+
+# Generated data
+data/processed/
+data/output/
+
+# Python caches
+.pytest_cache/
+.ruff_cache/
+*.pyc
+
+# Model weights
+*.safetensors
