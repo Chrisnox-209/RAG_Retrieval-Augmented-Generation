@@ -98,10 +98,25 @@ def generate_answer(
         return_tensors="pt",
         add_special_tokens=False
     )
+
+    nb_tokens_prompt: int = entrees["input_ids"].shape[1]
+    max_tokens: int = modele.config.max_position_embeddings
+    max_tokens_answer: int = 256
+
+    if nb_tokens_prompt + max_tokens_answer > max_tokens:
+        raise ValueError(f"{Color.MAGENTA.value}The number of tokens ["
+                         f"{Color.CYAN.value}"
+                         f"{nb_tokens_prompt + max_tokens_answer}"
+                         f"{Color.MAGENTA.value}{Color.CYAN.value}] to be used"
+                         " is too large relative to the model's limit ["
+                         f"{Color.CYAN.value}{max_tokens}{Color.MAGENTA.value}"
+                         f"{Color.CYAN.value}]"
+                         f"{Color.RST.value}")
+
     entrees = entrees.to(modele.device)
     tokens_generates: Tensor = cast(Any, modele).generate(
         **entrees,
-        max_new_tokens=256,
+        max_new_tokens=max_tokens_answer,
         do_sample=False
     )
     tokens_answer: Tensor = tokens_generates[0][entrees["input_ids"].shape[1]:]
