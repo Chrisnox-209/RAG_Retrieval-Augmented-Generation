@@ -109,10 +109,10 @@ def run_search(directory_info_index: str, file_info_index: str,
 
 def start_search_dataset(dataset_path: str, k: int = 5,
                          save_directory: str = (
-                             "data/output/search_results/UnansweredQuestions")
+                             "data/output/search_results/UnansweredQuestions"),
+                         processed_directory: str = "data/processed"
                          ) -> None:
     dataset: RagDataset = parse_dataset(dataset_path)
-    processed_directory: str = "data/processed"
     directory_info_index: str = str(Path(processed_directory) / "info")
     file_info_index: str = "chunk_info.json"
     directory_index: str = str(Path(processed_directory) / "bm25")
@@ -210,9 +210,6 @@ def answer_dataset(
 
     student_results: StudentSearchResults = (
         StudentSearchResults.model_validate(json_content))
-
-    print(len(student_results.search_results))
-    print(student_results.search_results[0].question)
 
     tokenizer: PreTrainedTokenizerBase
     modele: PreTrainedModel
