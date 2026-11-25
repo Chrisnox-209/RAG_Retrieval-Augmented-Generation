@@ -1,4 +1,4 @@
-*Ce projet a été réalisé dans le cadre du cursus de 42 par YOUR_42_LOGIN.*
+*This project has been created as part of the 42 curriculum by cpietrza.*
 
 # RAG against the machine
 

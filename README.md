@@ -1,4 +1,4 @@
-*This project has been created as part of the 42 curriculum by YOUR_42_LOGIN.*
+*This project has been created as part of the 42 curriculum by cpietrza.*
 
 # RAG against the machine
 
