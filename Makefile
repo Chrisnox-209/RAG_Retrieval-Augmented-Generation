@@ -15,7 +15,6 @@ run:
 	@uv run python -m src
 
 clean:
-# 	@rm -Rf .venv
 	@rm -Rf __pycache__
 	@rm -Rf src/__pycache__
 	@rm -Rf test/__pycache__
