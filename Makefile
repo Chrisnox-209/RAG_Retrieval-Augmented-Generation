@@ -15,7 +15,7 @@ run:
 	@uv run python -m src
 
 clean:
-	@rm -Rf .venv
+# 	@rm -Rf .venv
 	@rm -Rf __pycache__
 	@rm -Rf src/__pycache__
 	@rm -Rf test/__pycache__
@@ -109,4 +109,4 @@ evaluate:
 		--student_search_results_path $(moulinette_path_code) \
 		--dataset_path $(moulinette_dataset_code)
 
-full: index search moulinette
+full: index search evaluate answer
