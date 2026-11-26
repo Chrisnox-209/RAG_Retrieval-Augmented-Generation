@@ -1,5 +1,5 @@
 from src.models import (ChunkModel, MinimalSource,
-                        SourceFile, RagDataset,
+                        SourceFile, RagDataset, UnansweredQuestion,
                         MinimalSearchResults, StudentSearchResults,
                         MinimalAnswer, StudentSearchResultsAndAnswer)
 from src.parse import parse_directory, parse_dataset
@@ -168,18 +168,38 @@ def answer(query: str,
            k: int = 5,
            processed_directory: str = "data/processed",
            test: bool = False,
-           llm: str = "Qwen/Qwen3-0.6B",) -> str:
+           llm: str = "Qwen/Qwen3-0.6B",
+           save_directory: str = (
+               "data/output/search_results_and_answer/SingleQuestion")
+           ) -> str:
+    """Generate and save the answer to one question."""
 
-    top_sourcer: list[MinimalSource] = start_search(query,
-                                                    k,
-                                                    processed_directory,
-                                                    test)
+    top_sources: list[MinimalSource] = _search_sources(
+        query, k, processed_directory, test)
 
-    str_source: str = build_context(top_sourcer)
+    str_source: str = build_context(top_sources)
     tokenizer: PreTrainedTokenizerBase
     modele: PreTrainedModel
     tokenizer, modele = load_model(llm)
     answer_llm: str = generate_answer(query, str_source, tokenizer, modele)
+
+    question: UnansweredQuestion = UnansweredQuestion(question=query)
+    result: MinimalAnswer = MinimalAnswer(
+        question_id=question.question_id,
+        question=question.question,
+        retrieved_sources=top_sources,
+        answer=answer_llm
+    )
+    student_answers: StudentSearchResultsAndAnswer = (
+        StudentSearchResultsAndAnswer(search_results=[result], k=k))
+
+    file_path: Path = Path(save_directory) / f"{question.question_id}.json"
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+    file_path.write_text(
+        student_answers.model_dump_json(indent=2),
+        encoding="utf-8"
+    )
+    print(f"Saved student_search_results_and_answer to {file_path}")
 
     return answer_llm
 
@@ -256,12 +276,13 @@ def answer_dataset(
     )
 
 
-def start_search(
+def _search_sources(
     query: str,
-    k: int = 5,
-    processed_directory: str = "data/processed",
-    test: bool = False
+    k: int,
+    processed_directory: str,
+    test: bool
 ) -> list[MinimalSource]:
+    """Load the index and return the sources for one question."""
 
     directory_info_index: str = str(Path(processed_directory) / "info")
     file_info_index: str = "chunk_info.json"
@@ -277,6 +298,39 @@ def start_search(
     )
 
     return build_minimal_sources(results)
+
+
+def start_search(
+    query: str,
+    k: int = 5,
+    processed_directory: str = "data/processed",
+    test: bool = False,
+    save_directory: str = "data/output/search_results/SingleQuestion"
+) -> list[MinimalSource]:
+    """Search for sources and save the results for one question."""
+
+    top_sources: list[MinimalSource] = _search_sources(
+        query, k, processed_directory, test)
+    question: UnansweredQuestion = UnansweredQuestion(question=query)
+    search_results: MinimalSearchResults = MinimalSearchResults(
+        question_id=question.question_id,
+        question=question.question,
+        retrieved_sources=top_sources
+    )
+    student_search_results: StudentSearchResults = StudentSearchResults(
+        search_results=[search_results],
+        k=k
+    )
+
+    file_path: Path = Path(save_directory) / f"{question.question_id}.json"
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+    file_path.write_text(
+        student_search_results.model_dump_json(indent=2),
+        encoding="utf-8"
+    )
+    print(f"Saved student_search_results to {file_path}")
+
+    return top_sources
 
 
 def start_indexation(
