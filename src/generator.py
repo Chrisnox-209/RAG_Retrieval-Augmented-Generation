@@ -96,7 +96,8 @@ def generate_answer(
     entrees: BatchEncoding[Any] = tokenizer(
         prompt_formate,
         return_tensors="pt",
-        add_special_tokens=False
+        add_special_tokens=False,
+        verbose=False
     )
 
     nb_tokens_prompt: int = entrees["input_ids"].shape[1]
@@ -107,10 +108,9 @@ def generate_answer(
         raise ValueError(f"{Color.MAGENTA.value}The number of tokens ["
                          f"{Color.CYAN.value}"
                          f"{nb_tokens_prompt + max_tokens_answer}"
-                         f"{Color.MAGENTA.value}{Color.CYAN.value}] to be used"
-                         " is too large relative to the model's limit ["
-                         f"{Color.CYAN.value}{max_tokens}{Color.MAGENTA.value}"
-                         f"{Color.CYAN.value}]"
+                         f"{Color.MAGENTA.value}] to be used is too large "
+                         f"relative to the model's limit [{Color.CYAN.value}"
+                         f"{max_tokens}{Color.MAGENTA.value}]"
                          f"{Color.RST.value}")
 
     entrees = entrees.to(modele.device)

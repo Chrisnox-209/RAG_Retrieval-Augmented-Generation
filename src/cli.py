@@ -174,14 +174,22 @@ def answer(query: str,
            ) -> str:
     """Generate and save the answer to one question."""
 
-    top_sources: list[MinimalSource] = _search_sources(
+    top_sources: list[MinimalSource] = search_sources(
         query, k, processed_directory, test)
 
     str_source: str = build_context(top_sources)
     tokenizer: PreTrainedTokenizerBase
     modele: PreTrainedModel
+
     tokenizer, modele = load_model(llm)
-    answer_llm: str = generate_answer(query, str_source, tokenizer, modele)
+
+    try:
+        answer_llm: str = generate_answer(query, str_source, tokenizer, modele)
+    except Exception as error:
+        print(f"{Color.RED.value}[ERROR]: "
+              f"{Color.YELLOW.value}(Answer) "
+              f"{Color.RST.value}{error}")
+        sys.exit(1)
 
     question: UnansweredQuestion = UnansweredQuestion(question=query)
     result: MinimalAnswer = MinimalAnswer(
@@ -276,7 +284,7 @@ def answer_dataset(
     )
 
 
-def _search_sources(
+def search_sources(
     query: str,
     k: int,
     processed_directory: str,
@@ -309,7 +317,7 @@ def start_search(
 ) -> list[MinimalSource]:
     """Search for sources and save the results for one question."""
 
-    top_sources: list[MinimalSource] = _search_sources(
+    top_sources: list[MinimalSource] = search_sources(
         query, k, processed_directory, test)
     question: UnansweredQuestion = UnansweredQuestion(question=query)
     search_results: MinimalSearchResults = MinimalSearchResults(
