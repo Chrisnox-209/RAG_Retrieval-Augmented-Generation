@@ -1,3 +1,5 @@
+"""Coordinate indexing, search, and answer generation for the CLI."""
+
 from src.models import (ChunkModel, MinimalSource,
                         SourceFile, RagDataset, UnansweredQuestion,
                         MinimalSearchResults, StudentSearchResults,
@@ -23,6 +25,23 @@ def run_indexation(path: Path, chunk_size: int, chunk_overlap_percent: int,
                    file_info_index: str,
                    directory_index: str,
                    ) -> tuple[BM25, list[dict[str, str | int]]]:
+    """Parse source files, build a BM25 index, and save it.
+
+    Args:
+        path: Root directory containing the source corpus.
+        chunk_size: Maximum number of characters per chunk.
+        chunk_overlap_percent: Desired overlap percentage between chunks.
+        directory_info_index: Destination directory for chunk metadata.
+        file_info_index: Filename for the chunk metadata JSON.
+        directory_index: Destination directory for the BM25 index.
+
+    Returns:
+        Built retriever and its chunk metadata in corpus order.
+
+    Raises:
+        SystemExit: If reading, chunking, indexing, or saving fails.
+    """
+
     try:
         files: list[SourceFile] = parse_directory(str(path))
         print(f"Recovered files : {len(files)}")
@@ -71,6 +90,23 @@ def run_indexation(path: Path, chunk_size: int, chunk_overlap_percent: int,
 def run_search(directory_info_index: str, file_info_index: str,
                directory_index: str, query: str, k: int,
                test: bool = False) -> list[dict[str, str | int | float]]:
+    """Search a saved index and optionally check the retrieved source slices.
+
+    Args:
+        directory_info_index: Directory containing the chunk metadata.
+        file_info_index: Filename of the chunk metadata JSON.
+        directory_index: Directory containing the saved BM25 index.
+        query: Question or search text.
+        k: Number of chunks to retrieve.
+        test: Whether to verify paths, bounds, and text against source files.
+
+    Returns:
+        Ranked retrieval dictionaries with text, score, path, and offsets.
+
+    Raises:
+        SystemExit: If loading or searching fails, or source checks return
+            False.
+    """
 
     retriever: BM25
     chunk_info: list[dict[str, str | int]] = []
@@ -112,6 +148,22 @@ def start_search_dataset(dataset_path: str, k: int = 5,
                              "data/output/search_results/UnansweredQuestions"),
                          processed_directory: str = "data/processed"
                          ) -> None:
+    """Search every dataset question and save the results as JSON.
+
+    Load the index once and write the output using the input dataset filename.
+
+    Args:
+        dataset_path: Path to the answered or unanswered question dataset.
+        k: Number of sources to retrieve per question.
+        save_directory: Directory for the search results JSON.
+        processed_directory: Directory containing the saved index and metadata.
+
+    Raises:
+        ValueError: If the dataset is missing or has invalid JSON or fields.
+        OSError: If the dataset cannot be read or the output cannot be written.
+        SystemExit: If loading the index or searching a question fails.
+    """
+
     dataset: RagDataset = parse_dataset(dataset_path)
     directory_info_index: str = str(Path(processed_directory) / "info")
     file_info_index: str = "chunk_info.json"
@@ -172,7 +224,27 @@ def answer(query: str,
            save_directory: str = (
                "data/output/search_results_and_answer/SingleQuestion")
            ) -> str:
-    """Generate and save the answer to one question."""
+    """Generate and save the answer to one question.
+
+    Write the answer and its sources to dataset_single_answer.json in the
+    selected output directory.
+
+    Args:
+        query: Question to answer.
+        k: Number of sources to retrieve for the context.
+        processed_directory: Directory containing the saved index and metadata.
+        test: Whether to verify retrieved source slices against the files.
+        llm: Hugging Face model identifier or local model directory.
+        save_directory: Directory for the answer JSON.
+
+    Returns:
+        Generated answer text for display in the terminal.
+
+    Raises:
+        SystemExit: If retrieval or answer generation fails.
+        ValueError: If a source file cannot be opened at its given path.
+        OSError: If source text cannot be read or the output cannot be written.
+    """
 
     top_sources: list[MinimalSource] = search_sources(
         query, k, processed_directory, test)
@@ -218,7 +290,23 @@ def answer_dataset(
             "dataset_code_public.json"),
         save_directory: str = (
             "data/output/search_results_and_answer/UnansweredQuestions"
-        ), llm: str = "Qwen/Qwen3-0.6B") -> None:
+        ), llm: str = "Qwen/Qwen3-0.6B",
+        verbose: bool = False) -> None:
+    """Generate answers from saved search results and write them as JSON.
+
+    Load the model once for the batch and reuse the input filename for the
+    output. Preserve the question identifiers, sources, and requested k.
+
+    Args:
+        student_search_results_path: Path to a StudentSearchResults JSON file.
+        save_directory: Directory for the generated answer JSON.
+        llm: Hugging Face model identifier or local model directory.
+
+    Raises:
+        ValueError: If input JSON or fields are invalid, a source is
+            inaccessible, or a prompt exceeds the model context limit.
+        OSError: If input files cannot be read or the output cannot be written.
+    """
 
     try:
         with open(student_search_results_path, "r", encoding="utf-8") as c:
@@ -249,7 +337,8 @@ def answer_dataset(
                      desc="Generating answers",
                      unit="question",
                      colour="red",
-                     dynamic_ncols=True):
+                     dynamic_ncols=True,
+                     disable=verbose):
 
         sources: str = build_context(data.retrieved_sources)
         answer_llm: str = generate_answer(data.question,
@@ -257,8 +346,11 @@ def answer_dataset(
                                           tokenizer,
                                           modele)
 
-        # print(f"{Color.GREEN.value}[Reponse LLM]: "
-        #       f"{Color.RST.value}{answer_llm}")
+        if verbose:
+            print(f"{Color.CYAN.value}[QUESTION]: {Color.MAGENTA.value}"
+                  f"{data.question}")
+            print(f"{Color.BLUE.value}[LLM RESPONSE]: "
+                  f"{Color.RST.value}{answer_llm}\n")
 
         result: MinimalAnswer = MinimalAnswer(
             question_id=data.question_id,
@@ -290,7 +382,20 @@ def search_sources(
     processed_directory: str,
     test: bool
 ) -> list[MinimalSource]:
-    """Load the index and return the sources for one question."""
+    """Load the index and return the sources for one question.
+
+    Args:
+        query: Question or search text.
+        k: Number of sources to retrieve.
+        processed_directory: Directory containing the saved index and metadata.
+        test: Whether to verify retrieved source slices against the files.
+
+    Returns:
+        Validated source locations in retrieval order.
+
+    Raises:
+        SystemExit: If index loading, retrieval, or source validation fails.
+    """
 
     directory_info_index: str = str(Path(processed_directory) / "info")
     file_info_index: str = "chunk_info.json"
@@ -316,7 +421,25 @@ def start_search(
     save_directory: str = "data/output/search_results/SingleQuestion",
     verbose: bool = False
 ) -> list[MinimalSource] | None:
-    """Save the sources for one question and display them in verbose mode."""
+    """Save the sources for one question and display them in verbose mode.
+
+    Write dataset_single.json in the selected output directory.
+
+    Args:
+        query: Question or search text.
+        k: Number of sources to retrieve.
+        processed_directory: Directory containing the saved index and metadata.
+        test: Whether to verify retrieved source slices against the files.
+        save_directory: Directory for the search results JSON.
+        verbose: Whether to return sources for display by Python Fire.
+
+    Returns:
+        Retrieved sources when verbose is True, otherwise None.
+
+    Raises:
+        SystemExit: If index loading, retrieval, or source validation fails.
+        OSError: If the output directory or JSON file cannot be written.
+    """
 
     top_sources: list[MinimalSource] = search_sources(
         query, k, processed_directory, test)
@@ -356,12 +479,16 @@ def start_indexation(
     source_path: str = "data/raw/vllm-0.10.1",
     processed_directory: str = "data/processed"
 ) -> None:
-    """
-    Build and save the BM25 index from the vLLM source files.
+    """Build and save the BM25 index from the vLLM source files.
 
     Args:
         max_chunk_size: Maximum number of characters per chunk.
         chunk_overlap_percent: Percentage of overlap between chunks.
+        source_path: Root directory containing the source corpus.
+        processed_directory: Destination directory for the index and metadata.
+
+    Raises:
+        SystemExit: If reading, chunking, indexing, or saving fails.
     """
     path: Path = Path(source_path)
     directory_info_index: str = str(Path(processed_directory) / "info")
