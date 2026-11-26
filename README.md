@@ -181,7 +181,7 @@ uv run python -m src answer_dataset \
   --save_directory data/output/search_results_and_answer/UnansweredQuestions
 ```
 
-The result file retains the question IDs, questions and retrieved sources and adds the generated answers. The model is loaded once for the batch.
+The result file retains the question IDs, questions and retrieved sources and adds the generated answers. The model is loaded once for the batch. If the input list is empty, the output contains an empty `search_results` list and keeps the original `k`.
 
 ### CLI help
 
@@ -264,7 +264,7 @@ For each question, the system reads the selected character ranges from the origi
 
 Generation disables thinking mode and sampling (`enable_thinking=False`, `do_sample=False`) and limits the completion to 256 new tokens. The generated tokens are separated from the input before decoding. This favors concise, reproducible answers but does not guarantee factual correctness.
 
-The current context builder concatenates all retrieved sources; it does not explicitly count input tokens or trim the context to the model's available token budget. This is a remaining improvement, particularly for large k values. The 2,000-character source limit is not a token-budget guarantee.
+Before generation, the program counts the tokens in the full prompt and adds the 256 tokens reserved for the answer. If that total exceeds the model's context limit, the command stops with an error.
 
 ## Data models and output
 
@@ -387,8 +387,6 @@ The public datasets used above contain 199 questions in total; a 200-question ru
 
 The following items remain to be checked or improved before final submission:
 
-- Explicit input token budgeting in generation, particularly when k is large.
-- Handling an empty batch in `answer_dataset` (it currently accesses the first question) and validating degenerate queries comprehensively.
 - Ensure required docstrings and repository-wide lint checks: the current Makefile scopes lint to `src/`, while the subject specifies checks over `.`; several functions still lack docstrings.
 - Confirm raw/index path conventions, record timings on the final configuration, and exclude large files and generated outputs from the submission.
 

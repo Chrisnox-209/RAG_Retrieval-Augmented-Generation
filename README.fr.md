@@ -181,7 +181,7 @@ uv run python -m src answer_dataset \
   --save_directory data/output/search_results_and_answer/UnansweredQuestions
 ```
 
-Le fichier produit conserve les identifiants, les questions et les sources retrouvées et ajoute les réponses générées. Le modèle est chargé une seule fois pour le lot.
+Le fichier produit conserve les identifiants, les questions et les sources retrouvées et ajoute les réponses générées. Le modèle est chargé une seule fois pour le lot. Si le lot d'entrée est vide, le fichier de sortie contient une liste `search_results` vide et conserve la valeur de `k`.
 
 ### Aide de la CLI
 
@@ -264,7 +264,7 @@ Pour chaque question, le système lit les plages de caractères sélectionnées 
 
 Le mode de réflexion et l'échantillonnage sont désactivés (`enable_thinking=False`, `do_sample=False`). La réponse est limitée à 256 nouveaux tokens. Les tokens générés sont séparés des tokens d'entrée avant décodage. Cette stratégie favorise des réponses concises et reproductibles, sans garantir leur exactitude.
 
-Le constructeur de contexte concatène actuellement toutes les sources retrouvées : il ne compte pas explicitement les tokens d'entrée et n'ajuste pas le contexte au budget disponible du modèle. Il s'agit d'une amélioration restante, notamment lorsque k est élevé. La limite de 2 000 caractères par source ne garantit pas le respect du budget de tokens.
+Avant la génération, le programme compte les tokens du prompt complet et ajoute les 256 tokens réservés à la réponse. Si ce total dépasse la limite de contexte du modèle, la commande s'arrête avec un message d'erreur.
 
 ## Modèles de données et sorties
 
@@ -387,8 +387,6 @@ Les datasets publics ci-dessus totalisent 199 questions ; un test sur 200 questi
 
 Les points suivants restent à vérifier ou améliorer avant la soumission finale :
 
-- Gestion explicite du budget de tokens d'entrée lors de la génération, notamment si k est élevé.
-- Gestion d'un lot vide dans `answer_dataset` (la fonction accède actuellement à la première question) et validation exhaustive des requêtes dégénérées.
 - Vérification des docstrings et du lint sur tout le dépôt : le Makefile actuel limite le lint à `src/`, alors que le sujet prescrit des vérifications sur `.` ; plusieurs fonctions ne disposent pas encore de docstring.
 - Confirmation des conventions de chemins, relevé des temps sur la configuration finale et exclusion des fichiers volumineux et des résultats générés de la soumission.
 
