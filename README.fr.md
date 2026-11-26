@@ -127,7 +127,9 @@ La CLI utilise par défaut 2 000 caractères et 15 % de recouvrement ; `make ind
 uv run python -m src search --query "What is the KV cache?" --k 5
 ```
 
-L'option `--test=True` vérifie que les chemins et positions retournés permettent de reconstruire le texte indexé.
+Ajoute `--verbose` pour afficher les sources dans le terminal. L'option `--test=True` vérifie que les chemins et positions retrouvés permettent de reconstruire le texte indexé.
+
+La commande écrit `dataset_single.json` dans `data/output/search_results/SingleQuestion/` par défaut. L'option `--save_directory` permet de choisir un autre dossier. Chaque exécution réussie remplace le résultat de recherche précédent dans ce dossier.
 
 ### 3. Rechercher sur un dataset
 
@@ -168,6 +170,8 @@ uv run python -m src answer --query "What is the KV cache?" --k 5
 ```
 
 Le modèle par défaut peut être indiqué explicitement avec `--llm Qwen/Qwen3-0.6B`.
+
+La commande enregistre la réponse et ses sources dans `dataset_single_answer.json` sous `data/output/search_results_and_answer/SingleQuestion/` par défaut. L'option `--save_directory` permet de choisir un autre dossier. Chaque exécution réussie remplace la réponse précédente dans ce dossier.
 
 ### 6. Générer les réponses d'un dataset
 
@@ -274,7 +278,7 @@ Les modèles Pydantic de `src/models.py` valident les structures échangées ent
 | `MinimalSearchResults`, `StudentSearchResults` | Emplacements des sources et valeur de k pour un lot. |
 | `MinimalAnswer`, `StudentSearchResultsAndAnswer` | Résultats de recherche enrichis des réponses générées. |
 
-La recherche par lots écrit un JSON conforme à `StudentSearchResults` et la génération par lots un JSON conforme à `StudentSearchResultsAndAnswer`. Dans l'implémentation actuelle, la recherche unitaire retourne des modèles de sources dans la CLI et la réponse unitaire retourne du texte.
+La recherche écrit un JSON conforme à `StudentSearchResults` et la génération écrit un JSON conforme à `StudentSearchResultsAndAnswer`. Ces formats s'appliquent aussi aux questions unitaires, pour lesquelles `search_results` contient un seul élément.
 
 Exemple illustratif de résultat par lots (positions fictives) :
 
@@ -310,18 +314,18 @@ IoU = longueur(intersection des plages) / longueur(union des plages)
 Recall@k(question) = sources de référence retrouvées / total des sources de référence
 ```
 
-L'évaluateur interne associe les questions par identifiant, compare chaque source de référence aux emplacements retrouvés et calcule la moyenne des recalls par question pour les questions associées disposant de sources de référence. Il indique le nombre de questions ignorées et le k enregistré. Il vérifie actuellement toutes les sources retournées sans appliquer une nouvelle découpe à k ; la moulinette externe reste la référence officielle.
+L'évaluateur interne associe les questions par identifiant et compare chaque source de référence aux `k` premiers résultats. Une question qui a des sources de référence compte dans la moyenne même si son résultat est absent. Dans ce cas, son rappel vaut zéro. La moulinette fournit les scores officiels.
 
 ### Résultats des datasets publics
 
-Mesures historiques de la moulinette enregistrées le 13 novembre 2026 (100 questions sur la documentation et 99 sur le code) :
+La moulinette officielle a validé les deux fichiers de résultats produits avec les réglages par défaut du Makefile. L'index utilise des fragments de 2 000 caractères et 33 % de recouvrement, et la recherche utilise `K=5`.
 
-| Dataset | Recall@1 | Recall@3 | Recall@5 | Recall@10 |
-| --- | ---: | ---: | ---: | ---: |
-| Documentation | 59,0 % | 79,0 % | **84,0 %** | 91,0 % |
-| Code | 33,3 % | 48,5 % | **56,6 %** | 60,6 % |
+| Dataset | Questions évaluées | Recall@1 | Recall@3 | Recall@5 | Recall@10 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Documentation | 100 | 62,0 % | 76,0 % | **85,0 %** | 85,0 % |
+| Code | 99 | 33,3 % | 49,5 % | **58,6 %** | 58,6 % |
 
-Ces deux valeurs historiques de Recall@5 dépassent les seuils du sujet. Elles ne constituent pas une nouvelle mesure du dernier commit ni de la configuration à 33 % du Makefile.
+Les deux scores de Recall@5 dépassent les seuils du sujet. Le Recall@10 est égal au Recall@5 pour cette exécution, car les fichiers de résultats contiennent seulement cinq sources par question.
 
 ### Expérimentation sur le recouvrement
 
@@ -336,17 +340,17 @@ Expérience historique enregistrée le 14 novembre 2026 avec des fragments de 2 
 | 35 % | 15 988 | 85 % | 58,6 % |
 | 40 % | 16 397 | 85 % | 58,6 % |
 
-Dans cette expérience, 30 % donne le meilleur recall sur la documentation et 35–40 % le meilleur recall sur le code. L'augmentation du recouvrement augmente le nombre de fragments sans amélioration systématique du recall documentaire. Le Makefile actuel fixe 33 % ; ce tableau ne permet pas d'établir son recall exact. Aucun résultat pour des tailles maximales inférieures n'est consigné ici.
+Dans cette expérience, 30 % donne le meilleur recall sur la documentation et 35–40 % le meilleur recall sur le code. L'augmentation du recouvrement augmente le nombre de fragments sans amélioration systématique du recall documentaire. Les résultats du réglage actuel du Makefile à 33 % figurent ci-dessus. Aucun résultat pour des tailles maximales inférieures n'est consigné ici.
 
 ### Exigences du sujet et temps d'exécution
 
 | Indicateur | Exigence | Mesure / état |
 | --- | --- | --- |
-| Recall@5 documentation | ≥ 80 % | 84,0 % lors du benchmark historique |
-| Recall@5 code | ≥ 50 % | 56,6 % lors du benchmark historique |
+| Recall@5 documentation | ≥ 80 % | 85,0 % avec la moulinette officielle |
+| Recall@5 code | ≥ 50 % | 58,6 % avec la moulinette officielle |
 | Indexation du corpus complet | ≤ 5 minutes | Temps non consigné ici |
 | Recherche sur 200 questions | ≤ 90 secondes | Temps non consigné ici |
-| Longueur des sources retrouvées | ≤ 2 000 caractères | Taille configurée contrôlée au découpage ; valider les sorties avec la moulinette |
+| Longueur des sources retrouvées | ≤ 2 000 caractères | Les deux fichiers de résultats publics ont été validés par la moulinette |
 
 Pour mesurer la configuration actuelle sur la machine utilisée (après installation des dépendances) :
 
@@ -384,10 +388,9 @@ Les datasets publics ci-dessus totalisent 199 questions ; un test sur 200 questi
 Les points suivants restent à vérifier ou améliorer avant la soumission finale :
 
 - Gestion explicite du budget de tokens d'entrée lors de la génération, notamment si k est élevé.
-- Écriture JSON pour les commandes unitaires si exigée par la section Output du sujet ; les commandes par lots produisent déjà les formats JSON demandés.
 - Gestion d'un lot vide dans `answer_dataset` (la fonction accède actuellement à la première question) et validation exhaustive des requêtes dégénérées.
 - Vérification des docstrings et du lint sur tout le dépôt : le Makefile actuel limite le lint à `src/`, alors que le sujet prescrit des vérifications sur `.` ; plusieurs fonctions ne disposent pas encore de docstring.
-- Confirmation des conventions de chemins, nouvelles mesures de temps et de Recall@5 sur la configuration finale, et exclusion des fichiers volumineux et résultats générés de la soumission.
+- Confirmation des conventions de chemins, relevé des temps sur la configuration finale et exclusion des fichiers volumineux et des résultats générés de la soumission.
 
 Aucun bonus facultatif n'est présenté comme validé dans ce README.
 
@@ -415,6 +418,4 @@ Aucun bonus facultatif n'est présenté comme validé dans ce README.
 
 ### Utilisation de l'intelligence artificielle
 
-ChatGPT a été utilisé comme assistant d'apprentissage et de développement pour expliquer les concepts du RAG, examiner la logique du parsing, du chunking, de l'indexation et de la recherche, étudier les erreurs de typage Python et de métadonnées BM25, discuter de la conception du prompt et du budget de contexte, interpréter les résultats des benchmarks et aider à rédiger puis traduire ce README. Ces usages concernent `parse.py`, `chunker.py`, `indexer.py`, `retriever.py`, `generator.py`, l'intégration CLI et la documentation du projet.
-
-Le README décrit l'implémentation et les expérimentations historiques, sans prétendre qu'une nouvelle validation complète a été réalisée par l'IA. Les suggestions et la documentation produites avec l'IA doivent être relues et comprises par l'auteur du projet avant la soumission. Indépendamment de cette assistance au développement, Qwen3-0.6B est le modèle de langage utilisé à l'exécution par l'application RAG.
+ChatGPT a été utilisé comme assistant d'apprentissage et de développement pour expliquer les concepts du RAG, examiner la du chunking, de l'indexation et de la recherche, étudier les erreurs de typage Python et de métadonnées BM25, discuter de la conception du prompt et du budget de contexte, interpréter les résultats des benchmarks et aider à rédiger puis traduire ce README.

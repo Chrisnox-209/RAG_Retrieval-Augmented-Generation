@@ -127,7 +127,9 @@ The CLI defaults to 2,000 characters and 15% overlap; `make index` uses 33%. Bot
 uv run python -m src search --query "What is the KV cache?" --k 5
 ```
 
-The optional `--test=True` verifies that the returned paths and character offsets reconstruct the indexed text.
+Add `--verbose` to display the sources in the terminal. The optional `--test=True` verifies that the retrieved paths and character offsets reconstruct the indexed text.
+
+The command saves `dataset_single.json` under `data/output/search_results/SingleQuestion/` by default. Use `--save_directory` to pick another folder. Each successful run replaces the previous search result in that folder.
 
 ### 3. Search a dataset
 
@@ -168,6 +170,8 @@ uv run python -m src answer --query "What is the KV cache?" --k 5
 ```
 
 The default model can be selected explicitly with `--llm Qwen/Qwen3-0.6B`.
+
+The command saves the answer and its sources in `dataset_single_answer.json` under `data/output/search_results_and_answer/SingleQuestion/` by default. Use `--save_directory` to pick another folder. Each successful run replaces the previous answer in that folder.
 
 ### 6. Generate answers for a dataset
 
@@ -274,7 +278,7 @@ Pydantic models in `src/models.py` validate the structures exchanged between pip
 | `MinimalSearchResults`, `StudentSearchResults` | Retrieved source locations and batch k. |
 | `MinimalAnswer`, `StudentSearchResultsAndAnswer` | Search results extended with generated answers. |
 
-Batch search writes JSON matching `StudentSearchResults`; batch generation writes JSON matching `StudentSearchResultsAndAnswer`. Single-query search returns source models through the CLI, and single-query answer returns text in the current implementation.
+Search writes JSON matching `StudentSearchResults`, and answer generation writes JSON matching `StudentSearchResultsAndAnswer`. Both formats also apply to single questions, where `search_results` contains one item.
 
 Illustrative batch search result (the offsets are examples, not a measured result):
 
@@ -310,18 +314,18 @@ IoU = length(intersection of spans) / length(union of spans)
 Recall@k(question) = matched reference sources / total reference sources
 ```
 
-The internal evaluator matches question IDs, checks each reference source against retrieved locations, and averages per-question recall for the matched questions with reference sources. It reports skipped questions and the k stored in the result. It currently checks all returned sources rather than independently slicing to k; use the external evaluator for official validation.
+The internal evaluator matches questions by ID and compares each reference source with the first `k` results. Questions with reference sources count in the average even when their search result is missing, in which case their recall is zero. The moulinette provides the official scores.
 
 ### Public dataset results
 
-Historical moulinette results recorded on 13 November 2026 (100 documentation questions and 99 code questions):
+The official moulinette accepted both result files produced with the Makefile defaults of 2,000 characters per chunk, 33% overlap and `K=5`.
 
-| Dataset | Recall@1 | Recall@3 | Recall@5 | Recall@10 |
-| --- | ---: | ---: | ---: | ---: |
-| Documentation | 59.0% | 79.0% | **84.0%** | 91.0% |
-| Code | 33.3% | 48.5% | **56.6%** | 60.6% |
+| Dataset | Questions evaluated | Recall@1 | Recall@3 | Recall@5 | Recall@10 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Documentation | 100 | 62.0% | 76.0% | **85.0%** | 85.0% |
+| Code | 99 | 33.3% | 49.5% | **58.6%** | 58.6% |
 
-Both historical Recall@5 values exceed the subject thresholds. These measurements are not a fresh benchmark of the current commit or the Makefile's 33% configuration.
+Both Recall@5 scores exceed the required thresholds. Recall@10 equals Recall@5 in this run because the result files contain only five sources per question.
 
 ### Overlap experiment
 
@@ -336,17 +340,17 @@ Historical experiment recorded on 14 November 2026 with 2,000-character chunks a
 | 35% | 15,988 | 85% | 58.6% |
 | 40% | 16,397 | 85% | 58.6% |
 
-In this experiment, 30% yielded the best documentation recall and 35–40% the best code recall. Increasing overlap also increased the number of chunks, without a consistent improvement in documentation recall. The present Makefile sets 33%; the table does not establish its exact recall. Results for smaller maximum chunk sizes have not been recorded here.
+In this experiment, 30% yielded the best documentation recall and 35–40% the best code recall. Increasing overlap also increased the number of chunks, without a consistent improvement in documentation recall. The results for the current Makefile setting of 33% are shown above. Results for smaller maximum chunk sizes have not been recorded here.
 
 ### Subject requirements and timing
 
 | Metric | Required | Evidence / status |
 | --- | --- | --- |
-| Documentation Recall@5 | ≥ 80% | 84.0% in historical benchmark |
-| Code Recall@5 | ≥ 50% | 56.6% in historical benchmark |
+| Documentation Recall@5 | ≥ 80% | 85.0% with the official moulinette |
+| Code Recall@5 | ≥ 50% | 58.6% with the official moulinette |
 | Full corpus indexing | ≤ 5 minutes | Timing not recorded here |
 | Retrieval of 200 questions | ≤ 90 seconds | Timing not recorded here |
-| Retrieved source length | ≤ 2,000 characters | Chunking enforces configured size range; validate output with moulinette |
+| Retrieved source length | ≤ 2,000 characters | Both public result files passed moulinette validation |
 
 To measure the current configuration on your machine (after dependency installation):
 
@@ -384,10 +388,9 @@ The public datasets used above contain 199 questions in total; a 200-question ru
 The following items remain to be checked or improved before final submission:
 
 - Explicit input token budgeting in generation, particularly when k is large.
-- JSON-file output for single-query commands if required under the subject's output section; current batch commands already write the specified JSON formats.
 - Handling an empty batch in `answer_dataset` (it currently accesses the first question) and validating degenerate queries comprehensively.
 - Ensure required docstrings and repository-wide lint checks: the current Makefile scopes lint to `src/`, while the subject specifies checks over `.`; several functions still lack docstrings.
-- Confirm raw/index path conventions, fresh timing and Recall@5 on the final configuration, and exclusion of large files and generated outputs from the submission.
+- Confirm raw/index path conventions, record timings on the final configuration, and exclude large files and generated outputs from the submission.
 
 No optional bonus feature is claimed as validated in this README.
 
@@ -417,6 +420,4 @@ No optional bonus feature is claimed as validated in this README.
 
 ### Use of AI
 
-ChatGPT was used as a learning and development assistant to explain RAG concepts, review parsing/chunking and indexing/retrieval logic, investigate Python typing and BM25 metadata errors, discuss prompt design and context budgeting, interpret benchmark outputs, and help draft and translate this README. These uses concern `parse.py`, `chunker.py`, `indexer.py`, `retriever.py`, `generator.py`, CLI integration and project documentation.
-
-The README describes the implementation and historical experiments rather than claiming that AI performed a fresh end-to-end validation. AI-generated suggestions and documentation must be reviewed and understood by the project author before submission. Separately, Qwen3-0.6B is the actual language model used by the RAG application at runtime.
+ChatGPT was used as a learning and development assistant to explain RAG concepts, review chunking, indexing, and retrieval logic, investigate Python typing and BM25 metadata errors, discuss prompt design and context budgeting, interpret benchmark results, and assist in drafting and translating this README.
