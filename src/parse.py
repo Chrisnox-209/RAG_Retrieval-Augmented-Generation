@@ -1,8 +1,12 @@
+from os.path import relpath
 from pathlib import Path
 from typing import Literal
 from src.utils import Color
 from src.models import (SourceFile, RagDataset)
 import json
+
+
+PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent
 
 
 def get_file_type(path: Path) -> Literal['python', 'text'] | None:
@@ -39,7 +43,7 @@ def parse_dataset(file: str) -> RagDataset:
 
 
 def parse_file(path: Path) -> SourceFile | None:
-    """Read one supported source file."""
+    """Read one supported source file and store its project-relative path."""
 
     file_type: Literal['python', 'text'] | None = get_file_type(path)
 
@@ -51,8 +55,10 @@ def parse_file(path: Path) -> SourceFile | None:
     except (OSError, UnicodeDecodeError):
         return None
 
+    file_path: str = Path(relpath(path, PROJECT_ROOT)).as_posix()
+
     return SourceFile(
-        file_path=str(path),
+        file_path=file_path,
         content=content,
         file_type=file_type,
     )
