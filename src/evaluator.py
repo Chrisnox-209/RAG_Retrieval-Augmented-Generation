@@ -1,7 +1,7 @@
 from src.models import (StudentSearchResults, RagDataset,
                         AnsweredQuestion, MinimalSource)
 from src.utils import Color
-from typing import Any, Literal
+from typing import Any
 from pathlib import Path
 import json
 
@@ -24,45 +24,33 @@ def calculate_iou(start_dataset: int, end_dataset: int,
     return iou
 
 
-def check_query(query_result: str,
-                dataset: RagDataset) -> str | Literal[False]:
-    for data in dataset.rag_questions:
-        if query_result == data.question_id:
-            return data.question_id
-    return False
+def check_path(dataset_sources: list[MinimalSource],
+               results_sources: list[MinimalSource]) -> int:
+    """Count the reference sources found in the retrieved results."""
 
+    point: int = 0
 
-def check_path(question_id: str, results_sources: list[MinimalSource],
-               dataset: RagDataset) -> tuple[int, int]:
+    for data_set in dataset_sources:
+        for result in results_sources:
+            if result.file_path != data_set.file_path:
+                continue
 
-    i: int = 0
-    j: int = 0
+            iou: float = calculate_iou(
+                data_set.first_character_index,
+                data_set.last_character_index,
+                result.first_character_index,
+                result.last_character_index,
+            )
 
-    for data in dataset.rag_questions:
-        if (data.question_id == question_id
-           and isinstance(data, AnsweredQuestion)):
+            if iou >= 0.05:
+                point += 1
+                break
 
-            for data_set in data.sources:
-
-                for result in results_sources:
-
-                    if result.file_path == data_set.file_path:
-                        iou: float = calculate_iou(
-                            data_set.first_character_index,
-                            data_set.last_character_index,
-                            result.first_character_index,
-                            result.last_character_index,)
-
-                        if iou >= 0.05:
-                            i += 1
-                            break
-
-                j += 1
-
-    return i, j
+    return point
 
 
 def evaluate(student_search_results_path: str, dataset_path: str) -> None:
+    """Print the average Recall@k over the reference questions."""
 
     try:
         with open(student_search_results_path, "r", encoding="utf-8") as c:
@@ -82,6 +70,12 @@ def evaluate(student_search_results_path: str, dataset_path: str) -> None:
 
     student_results: StudentSearchResults = (
         StudentSearchResults.model_validate(json_content))
+    k: int = student_results.k
+
+    if k < 0:
+        raise ValueError(f"{Color.MAGENTA.value}The value of k["
+                         f"{Color.CYAN.value}{k}{Color.MAGENTA.value}] "
+                         f"is not valid.{Color.RST.value}")
 
     try:
         with open(dataset_path, "r", encoding="utf-8") as c:
@@ -102,6 +96,16 @@ def evaluate(student_search_results_path: str, dataset_path: str) -> None:
     dataset: RagDataset = (
         RagDataset.model_validate(json_dataset))
 
+    results_by_question: dict[str, list[MinimalSource]] = {}
+    for results in student_results.search_results:
+        if results.question_id not in results_by_question:
+            results_by_question[results.question_id] = (
+                results.retrieved_sources[:k])
+
+    score: float = 0
+    total: int = 0
+    number_missing: int = 0
+
     for data in dataset.rag_questions:
         if not isinstance(data, AnsweredQuestion):
             raise ValueError(
@@ -111,26 +115,20 @@ def evaluate(student_search_results_path: str, dataset_path: str) -> None:
                 f"{Color.CYAN.value}AnsweredQuestion"
                 f"{Color.MAGENTA.value}] type{Color.RST.value}")
 
-    score: float = 0
-    total = 0
-    point: int
-    j: int
-    for results in student_results.search_results:
-        id: str | Literal[False] = check_query(results.question_id, dataset)
-        if id is not False:
-            if results.question_id == id:
-                point = 0
-                j = 0
-                point, j = check_path(results.question_id,
-                                      results.retrieved_sources,
-                                      dataset)
+        number_sources: int = len(data.sources)
+        if number_sources == 0:
+            continue
 
-                if j > 0:
-                    moy: float = point / j
-                    score += moy
-                    total += 1
-                else:
-                    moy = 0
+        total += 1
+        results_sources: list[MinimalSource] | None = (
+            results_by_question.get(data.question_id))
+        if results_sources is None:
+            number_missing += 1
+            continue
+
+        point: int = check_path(data.sources, results_sources)
+        moy: float = point / number_sources
+        score += moy
 
     if total > 0:
         last_total: float = (score * 100) / total
@@ -139,7 +137,7 @@ def evaluate(student_search_results_path: str, dataset_path: str) -> None:
 
     number_results: int = len(student_results.search_results)
     number_questions: int = len(dataset.rag_questions)
-    number_skipped: int = number_results - total
+    number_skipped: int = number_questions - total
 
     print()
     print("╔══════════════════════════════════════════════╗")
@@ -154,14 +152,15 @@ def evaluate(student_search_results_path: str, dataset_path: str) -> None:
     print(f"  Dataset questions      : {number_questions}")
     print(f"  Search results         : {number_results}")
     print(f"  Evaluated questions    : {total}")
+    print(f"  Missing results        : {number_missing}")
     print(f"  Skipped questions      : {number_skipped}")
-    print(f"  Top-K                  : {student_results.k}")
+    print(f"  Top-K                  : {k}")
 
     print()
     print("────────────────────────────────────────────────")
 
     if total > 0:
-        print(f"  Recall@{student_results.k:<2}              : "
+        print(f"  Recall@{k:<2}              : "
               f"{last_total / 100:.3f} ({last_total:.2f}%)")
     else:
         print("  Recall                  : N/A")
