@@ -41,6 +41,9 @@ chunk_overlap_percent = 33
 source_path = data/raw/vllm-0.10.1
 processed_directory = data/processed
 
+# ## Option
+verbose = False
+
 # ### search
 dataset_path_docs = data/datasets/UnansweredQuestions/dataset_docs_public.json
 dataset_path_code = data/datasets/UnansweredQuestions/dataset_code_public.json
@@ -70,6 +73,7 @@ search:
 		--dataset_path $(dataset_path_docs) \
 		--k $(K) \
 		--save_directory $(save_directory_search)
+
 	@uv run python3 -m src search_dataset \
 		--dataset_path $(dataset_path_code) \
 		--k $(K) \
@@ -93,11 +97,13 @@ moulinette:
 answer:
 	@uv run python3 -m src answer_dataset \
 		--student_search_results_path $(student_search_results_path_docs) \
-		--save_directory $(save_directory)
+		--save_directory $(save_directory) \
+		--verbose ${verbose}
 
 	@uv run python3 -m src answer_dataset \
 		--student_search_results_path $(student_search_results_path_code) \
-		--save_directory $(save_directory)
+		--save_directory $(save_directory) \
+		--verbose ${verbose}
 
 evaluate:
 	@uv run python3 -m src evaluate \
