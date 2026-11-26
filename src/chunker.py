@@ -1,3 +1,5 @@
+"""Split Python and text files into chunks with original character offsets."""
+
 from langchain_core.documents.base import Document
 from langchain_text_splitters import (MarkdownTextSplitter,
                                       PythonCodeTextSplitter)
@@ -9,6 +11,21 @@ from typing import Any
 
 def chunk_markdown(chunk_size: int, chunk_overlap_percent: int,
                    data: str, path: str) -> list[ChunkModel]:
+    """Split Markdown or text while preserving its character positions.
+
+    Args:
+        chunk_size: Maximum chunk length, from 1 to 2000 characters.
+        chunk_overlap_percent: Desired overlap percentage, from 0 to 99.
+        data: Full source text to split.
+        path: Source file path to attach to each chunk.
+
+    Returns:
+        Chunks with inclusive start and exclusive end offsets, or an empty
+        list when the input text is empty.
+
+    Raises:
+        ValueError: If the size, overlap, or resulting offsets are invalid.
+    """
 
     if chunk_overlap_percent < 0 or chunk_overlap_percent >= 100:
         raise ValueError(f"{Color.MAGENTA.value}The chunk_overlap_percent must"
@@ -62,6 +79,21 @@ def chunk_markdown(chunk_size: int, chunk_overlap_percent: int,
 
 def chunk_python(chunk_size: int, chunk_overlap_percent: int,
                  data: str, path: str) -> list[ChunkModel]:
+    """Split Python code using separators suited to its structure.
+
+    Args:
+        chunk_size: Maximum chunk length, from 1 to 2000 characters.
+        chunk_overlap_percent: Desired overlap percentage, from 0 to 99.
+        data: Full Python source text to split.
+        path: Source file path to attach to each chunk.
+
+    Returns:
+        Chunks with inclusive start and exclusive end offsets, or an empty
+        list when the input text is empty.
+
+    Raises:
+        ValueError: If the size, overlap, or resulting offsets are invalid.
+    """
 
     if chunk_overlap_percent < 0 or chunk_overlap_percent >= 100:
         raise ValueError(f"{Color.MAGENTA.value}The chunk_overlap_percent must"
@@ -116,6 +148,23 @@ def chunk_file(file_type: str,
                content: str,
                chunk_size: int,
                chunk_overlap_percent: int) -> list[ChunkModel]:
+    """Select a chunking strategy according to the source file type.
+
+    Args:
+        file_type: Strategy to use, either "python" or "text".
+        file_path: Source file path to attach to the chunks.
+        content: Full source text to split.
+        chunk_size: Maximum number of characters per chunk.
+        chunk_overlap_percent: Desired overlap percentage between chunks.
+
+    Returns:
+        Chunks produced by the selected strategy, or an empty list for an
+        unsupported file type.
+
+    Raises:
+        ValueError: If the selected strategy rejects the chunk parameters
+            or the resulting offsets.
+    """
 
     list_chunks: list[ChunkModel] = []
     result: list[ChunkModel] = []
@@ -137,6 +186,19 @@ def chunk_file(file_type: str,
 
 def files_distribution(files: list[SourceFile], chunk_size: int,
                        chunk_overlap_percent: int) -> list[ChunkModel]:
+    """Chunk all source files and display progress.
+
+    Args:
+        files: Parsed source files to process.
+        chunk_size: Maximum number of characters per chunk.
+        chunk_overlap_percent: Desired overlap percentage between chunks.
+
+    Returns:
+        Chunks from all files in their processing order.
+
+    Raises:
+        ValueError: If a chunking strategy rejects the parameters or offsets.
+    """
 
     list_chunk: list[ChunkModel] = []
     for objet in tqdm(files, desc="Chunking", unit="file", colour="blue"):

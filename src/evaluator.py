@@ -1,3 +1,5 @@
+"""Compute local Recall@k from retrieved and reference source locations."""
+
 from src.models import (StudentSearchResults, RagDataset,
                         AnsweredQuestion, MinimalSource)
 from src.utils import Color
@@ -8,6 +10,18 @@ import json
 
 def calculate_iou(start_dataset: int, end_dataset: int,
                   start_result: int, end_result: int) -> float:
+    """Compute intersection over union for two character ranges.
+
+    Args:
+        start_dataset: Inclusive start of the reference range.
+        end_dataset: Exclusive end of the reference range.
+        start_result: Inclusive start of the retrieved range.
+        end_result: Exclusive end of the retrieved range.
+
+    Returns:
+        Intersection length divided by union length, or zero when the
+        ranges do not overlap.
+    """
 
     intersection_start: int = max(start_dataset, start_result)
     intersection_end: int = min(end_dataset, end_result)
@@ -26,7 +40,17 @@ def calculate_iou(start_dataset: int, end_dataset: int,
 
 def check_path(dataset_sources: list[MinimalSource],
                results_sources: list[MinimalSource]) -> int:
-    """Count the reference sources found in the retrieved results."""
+    """Count the reference sources found in the retrieved results.
+
+    Args:
+        dataset_sources: Reference source locations for one question.
+        results_sources: Retrieved sources to compare with the references.
+
+    Returns:
+        Number of reference sources matched by a result in the same file
+        with an intersection over union of at least 0.05. Each reference
+        source counts at most once.
+    """
 
     point: int = 0
 
@@ -50,7 +74,21 @@ def check_path(dataset_sources: list[MinimalSource],
 
 
 def evaluate(student_search_results_path: str, dataset_path: str) -> None:
-    """Print the average Recall@k over the reference questions."""
+    """Print the average Recall@k over the reference questions.
+
+    Match questions by identifier and compare only the first k retrieved
+    sources. Missing results contribute zero recall. Skip reference questions
+    with no sources.
+
+    Args:
+        student_search_results_path: Path to the retrieved results JSON.
+        dataset_path: Path to the dataset with reference answers and sources.
+
+    Raises:
+        ValueError: If an input is missing, has invalid JSON or fields,
+            contains unanswered reference questions, or uses a negative k.
+        OSError: If an input file cannot be read for another filesystem reason.
+    """
 
     try:
         with open(student_search_results_path, "r", encoding="utf-8") as c:

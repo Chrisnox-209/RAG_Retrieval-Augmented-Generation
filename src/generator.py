@@ -1,3 +1,5 @@
+"""Reconstruct source context and generate answers with a local model."""
+
 from typing import Any
 
 from transformers import (AutoTokenizer,
@@ -15,6 +17,18 @@ llm: str = "Qwen/Qwen3-0.6B"
 
 
 def load_model(llm: str) -> tuple[PreTrainedTokenizerBase, PreTrainedModel]:
+    """Load a tokenizer and a causal language model.
+
+    Use the local model cache when available and download missing files.
+    Let Transformers choose the devices used to load the model.
+
+    Args:
+        llm: Hugging Face model identifier or local model directory.
+
+    Returns:
+        Tokenizer and model ready for answer generation.
+    """
+
     tokenizer: PreTrainedTokenizerBase = AutoTokenizer.from_pretrained(llm)
     modele: PreTrainedModel = AutoModelForCausalLM.from_pretrained(
         llm,
@@ -24,6 +38,22 @@ def load_model(llm: str) -> tuple[PreTrainedTokenizerBase, PreTrainedModel]:
 
 
 def extract_source_text(source: MinimalSource) -> str:
+    """Read the character range described by a source location.
+
+    Args:
+        source: File path and character range, with an inclusive start and
+            exclusive end.
+
+    Returns:
+        Slice of the UTF-8 source text covered by the given offsets.
+
+    Raises:
+        ValueError: If the source path is missing, unreadable due to
+            permissions, or points to a directory.
+        OSError: If another filesystem error prevents reading the file.
+        UnicodeDecodeError: If the source is not valid UTF-8 text.
+    """
+
     path: Path = Path(source.file_path)
     first_id: int = source.first_character_index
     last_id: int = source.last_character_index
@@ -51,6 +81,16 @@ def extract_source_text(source: MinimalSource) -> str:
 
 
 def build_context(sources: list[MinimalSource]) -> str:
+    """Combine retrieved source slices into a numbered context.
+
+    Args:
+        sources: Source locations in the order to present to the model.
+
+    Returns:
+        Numbered excerpts separated by blank lines, or an empty string
+        when no sources are provided.
+    """
+
     str_source: str = ''
 
     for i, obj in enumerate(sources, start=1):
@@ -64,6 +104,24 @@ def generate_answer(
     query: str, context: str,
     tokenizer: PreTrainedTokenizerBase, modele: PreTrainedModel
 ) -> str:
+    """Generate an answer from the question and retrieved context.
+
+    Format a chat prompt and reserve 256 tokens for the answer. Count the
+    prompt tokens before generation and stop if the model limit is exceeded.
+
+    Args:
+        query: Question to answer.
+        context: Retrieved source text supplied as evidence.
+        tokenizer: Tokenizer used to format and encode the prompt.
+        modele: Loaded causal language model used for generation.
+
+    Returns:
+        Decoded answer text without the input prompt or special tokens.
+
+    Raises:
+        ValueError: If the prompt and reserved answer exceed the model's
+            context limit.
+    """
 
     pre_prompt: str = (
         "You are a technical assistant specialized in the vLLM codebase.\n"

@@ -1,3 +1,5 @@
+"""Provide terminal colors and conversion to minimal source models."""
+
 from enum import Enum
 from src.models import MinimalSource
 
@@ -18,6 +20,18 @@ class Color(Enum):
 
 def build_minimal_sources(results: list[dict[str, str | int | float]]
                           ) -> list[MinimalSource]:
+    """Convert retrieval dictionaries into validated source locations.
+
+    Args:
+        results: Ranked dictionaries with path, first_index, and last_index.
+
+    Returns:
+        MinimalSource models in the same order as the input results.
+
+    Raises:
+        KeyError: If a required dictionary key is missing.
+        ValueError: If Pydantic rejects a source field.
+    """
 
     lst_objects: list[MinimalSource] = []
 

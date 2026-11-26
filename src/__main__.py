@@ -1,3 +1,4 @@
+"""Expose the RAG commands through the Python Fire CLI."""
 
 from src.utils import Color
 from src.evaluator import evaluate

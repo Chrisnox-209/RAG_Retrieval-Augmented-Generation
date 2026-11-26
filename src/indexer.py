@@ -1,3 +1,5 @@
+"""Build and persist a BM25 index alongside chunk metadata."""
+
 from typing import List
 from pathlib import Path
 from bm25s.tokenization import Tokenized
@@ -9,6 +11,19 @@ import json
 
 def create_corpus(list_chunk: list[ChunkModel]
                   ) -> tuple[List[str], list[dict[str, str | int]]]:
+    """Separate chunk text from the metadata used to locate its source.
+
+    Args:
+        list_chunk: Chunks to include in the index.
+
+    Returns:
+        Corpus texts and their corresponding paths and character offsets.
+        Entries at the same position describe the same chunk.
+
+    Raises:
+        ValueError: If the corpus and metadata lengths differ.
+    """
+
     chunk_info: list[dict[str, str | int]] = []
     corpus: list[str] = []
     for chunk in list_chunk:
@@ -31,6 +46,15 @@ def create_corpus(list_chunk: list[ChunkModel]
 
 
 def build_index(corpus: list[str]) -> bm25s.BM25:
+    """Tokenize the corpus and build its BM25 index.
+
+    Args:
+        corpus: Chunk texts to index.
+
+    Returns:
+        BM25 retriever holding the indexed corpus.
+    """
+
     corpus_tokens: List[List[str]] | Tokenized = bm25s.tokenize(corpus)
     retriever: bm25s.BM25 = bm25s.BM25(corpus=corpus)
     retriever.index(corpus_tokens)
@@ -44,6 +68,22 @@ def save_index(directory_info: str,
                retriever: bm25s.BM25,
                corpus: list[str],
                chunk_info: list[dict[str, str | int]]) -> None:
+    """Save the BM25 index, corpus, and chunk metadata to disk.
+
+    Create the destination directories when needed and overwrite existing
+    files at the same locations.
+
+    Args:
+        directory_info: Directory for the chunk metadata JSON file.
+        directory_index: Directory for the BM25 index and corpus.
+        file_info_index: Filename to use for the metadata JSON.
+        retriever: Built BM25 index to save.
+        corpus: Chunk texts associated with the index.
+        chunk_info: Paths and offsets in the same order as the corpus.
+
+    Raises:
+        OSError: If the index or metadata cannot be saved.
+    """
 
     root_info = Path(directory_info)
     path_file_info: Path = root_info / file_info_index
