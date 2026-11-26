@@ -201,7 +201,7 @@ def answer(query: str,
     student_answers: StudentSearchResultsAndAnswer = (
         StudentSearchResultsAndAnswer(search_results=[result], k=k))
 
-    file_path: Path = Path(save_directory) / f"{question.question_id}.json"
+    file_path: Path = Path(save_directory) / "dataset_single_answer.json"
     file_path.parent.mkdir(parents=True, exist_ok=True)
     file_path.write_text(
         student_answers.model_dump_json(indent=2),
@@ -313,9 +313,10 @@ def start_search(
     k: int = 5,
     processed_directory: str = "data/processed",
     test: bool = False,
-    save_directory: str = "data/output/search_results/SingleQuestion"
-) -> list[MinimalSource]:
-    """Search for sources and save the results for one question."""
+    save_directory: str = "data/output/search_results/SingleQuestion",
+    verbose: bool = False
+) -> list[MinimalSource] | None:
+    """Save the sources for one question and display them in verbose mode."""
 
     top_sources: list[MinimalSource] = search_sources(
         query, k, processed_directory, test)
@@ -330,15 +331,23 @@ def start_search(
         k=k
     )
 
-    file_path: Path = Path(save_directory) / f"{question.question_id}.json"
+    file_path: Path = Path(save_directory) / "dataset_single.json"
     file_path.parent.mkdir(parents=True, exist_ok=True)
     file_path.write_text(
         student_search_results.model_dump_json(indent=2),
         encoding="utf-8"
     )
-    print(f"Saved student_search_results to {file_path}")
 
-    return top_sources
+    print(
+        f"{Color.GREEN.value}[SUCCESS] "
+        f"{Color.BLUE.value}Saved student_search_results to: "
+        f"{Color.YELLOW.value}{file_path}{Color.RST.value}"
+    )
+
+    if verbose:
+        return top_sources
+
+    return None
 
 
 def start_indexation(
