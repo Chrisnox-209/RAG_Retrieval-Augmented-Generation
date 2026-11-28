@@ -4,7 +4,7 @@ MYPY_STRICT = --strict
 FLAKE_STRICT = --max-complexity=25
 
 
-.PHONY: all install run clean lint lint-strict debug index search moulinette full evaluate
+.PHONY: all install run clean lint lint-strict debug index search answer moulinette full evaluate api
 
 all: run
 
@@ -42,8 +42,8 @@ source_path = data/raw/vllm-0.10.1
 processed_directory = data/processed
 
 # ## Option
-verbose = True
-debug = True
+verbose = False
+debug = False
 
 # ### search
 dataset_path_docs = data/datasets/UnansweredQuestions/dataset_docs_public.json
@@ -119,3 +119,6 @@ evaluate:
 		--dataset_path $(moulinette_dataset_code)
 
 full: index search evaluate answer
+
+api:
+	@uv run uvicorn src.api:app --host 127.0.0.1 --port 8000
