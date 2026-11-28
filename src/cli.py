@@ -11,6 +11,8 @@ from src.retriever import load_index, search
 from src.tests import test_check_chunk_positions
 from src.utils import Color, build_minimal_sources
 from src.generator import build_context, generate_answer, load_model
+from src.cache import (generate_cache_key, save_cache,
+                       load_cache, invalidate_cache)
 from transformers import PreTrainedTokenizerBase, PreTrainedModel
 from typing import Any
 from tqdm import tqdm
@@ -24,6 +26,7 @@ def run_indexation(path: Path, chunk_size: int, chunk_overlap_percent: int,
                    directory_info_index: str,
                    file_info_index: str,
                    directory_index: str,
+                   debug: bool
                    ) -> tuple[BM25, list[dict[str, str | int]]]:
     """Parse source files, build a BM25 index, and save it.
 
@@ -41,6 +44,7 @@ def run_indexation(path: Path, chunk_size: int, chunk_overlap_percent: int,
     Raises:
         SystemExit: If reading, chunking, indexing, or saving fails.
     """
+    cache_directory: str = str(Path(directory_index).parent / "cache")
 
     try:
         files: list[SourceFile] = parse_directory(str(path))
@@ -67,7 +71,6 @@ def run_indexation(path: Path, chunk_size: int, chunk_overlap_percent: int,
         chunk_info: list[dict[str, str | int]] = []
         corpus: list[str] = []
         corpus, chunk_info = create_corpus(list_chunk)
-        retriever: BM25 = build_index(corpus)
     except Exception as error:
         print(f"{Color.RED.value}[ERROR]: "
               f"{Color.YELLOW.value}(corpus) "
@@ -75,12 +78,21 @@ def run_indexation(path: Path, chunk_size: int, chunk_overlap_percent: int,
         sys.exit(1)
 
     try:
+        retriever: BM25 = build_index(corpus)
+    except Exception as error:
+        print(f"{Color.RED.value}[ERROR]: "
+              f"{Color.YELLOW.value}(build_index) "
+              f"{Color.RST.value}{error}")
+        sys.exit(1)
+
+    try:
+        invalidate_cache(cache_directory, debug)
         save_index(directory_info_index, directory_index,
                    file_info_index, retriever,
                    corpus, chunk_info)
     except Exception as error:
         print(f"{Color.RED.value}[ERROR]: "
-              f"{Color.YELLOW.value}(build_index) "
+              f"{Color.YELLOW.value}(save_index) "
               f"{Color.RST.value}{error}")
         sys.exit(1)
 
@@ -108,26 +120,56 @@ def run_search(directory_info_index: str, file_info_index: str,
             False.
     """
 
-    retriever: BM25
+    retriever: BM25 | None = None
     chunk_info: list[dict[str, str | int]] = []
+    list_dict_struct: list[dict[str, str | int | float]] | None
+    cache_directory: str = str(Path(directory_index).parent / "cache")
 
-    try:
-        file_info: str = directory_info_index + "/" + file_info_index
-        retriever, chunk_info = load_index(file_info, directory_index)
-    except Exception as error:
-        print(f"{Color.RED.value}[ERROR]: "
-              f"{Color.YELLOW.value}(reading_index) "
-              f"{Color.RST.value}{error}")
-        sys.exit(1)
+    key: str = generate_cache_key(query, k)
+    list_dict_struct = load_cache(cache_directory, key)
 
-    try:
-        list_dict_struct: list[dict[str, str | int | float]] = search(
-            chunk_info, query, retriever, k)
-    except Exception as error:
-        print(f"{Color.RED.value}[ERROR]: "
-              f"{Color.YELLOW.value}(search_index) "
-              f"{Color.RST.value}{error}")
-        sys.exit(1)
+    if list_dict_struct is None:
+        if test:
+            print(f"{Color.CYAN.value}[INFO]: "
+                  f"{Color.YELLOW.value}(CACHE MISS) "
+                  f"{Color.BLUE.value}Searching BM25 index."
+                  f"{Color.RST.value}")
+
+        try:
+            file_info: str = str(Path(directory_info_index) / file_info_index)
+            retriever, chunk_info = load_index(file_info, directory_index)
+        except Exception as error:
+            print(f"{Color.RED.value}[ERROR]: "
+                  f"{Color.YELLOW.value}(reading_index) "
+                  f"{Color.RST.value}{error}")
+            sys.exit(1)
+
+        try:
+            list_dict_struct = search(chunk_info, query, retriever, k)
+        except Exception as error:
+            print(f"{Color.RED.value}[ERROR]: "
+                  f"{Color.YELLOW.value}(search_index) "
+                  f"{Color.RST.value}{error}")
+            sys.exit(1)
+
+        try:
+            save_cache(cache_directory, key, list_dict_struct)
+            if test:
+                print(f"{Color.CYAN.value}[INFO]: "
+                      f"{Color.YELLOW.value}(CACHE SAVED) "
+                      f"{Color.GREEN.value}Caching of the key ["
+                      f"{Color.MAGENTA.value}{key}{Color.GREEN.value}] "
+                      f"has been successfully completed.{Color.RST.value}")
+        except Exception as error:
+            print(f"{Color.ORANGE.value}[WARNING]: "
+                  f"{Color.YELLOW.value}(save_cache) "
+                  f"{Color.RST.value}{error}")
+
+    elif test:
+        print(f"{Color.CYAN.value}[INFO]: "
+              f"{Color.YELLOW.value}(CACHE HIT) "
+              f"{Color.BLUE.value}Results loaded from cache."
+              f"{Color.RST.value}")
 
     if test:
         if test_check_chunk_positions(list_dict_struct):
@@ -146,7 +188,8 @@ def run_search(directory_info_index: str, file_info_index: str,
 def start_search_dataset(dataset_path: str, k: int = 5,
                          save_directory: str = (
                              "data/output/search_results/UnansweredQuestions"),
-                         processed_directory: str = "data/processed"
+                         processed_directory: str = "data/processed",
+                         debug: bool = False
                          ) -> None:
     """Search every dataset question and save the results as JSON.
 
@@ -168,41 +211,64 @@ def start_search_dataset(dataset_path: str, k: int = 5,
     directory_info_index: str = str(Path(processed_directory) / "info")
     file_info_index: str = "chunk_info.json"
     directory_index: str = str(Path(processed_directory) / "bm25")
+    cache_directory: str = str(Path(directory_index).parent / "cache")
     lst_search_results: list[MinimalSearchResults] = []
-    retriever: BM25
+    retriever: BM25 | None = None
     chunk_info: list[dict[str, str | int]]
+    list_dict_struct: list[dict[str, str | int | float]] | None
 
-    try:
-        file_info: str = directory_info_index + "/" + file_info_index
-        retriever, chunk_info = load_index(file_info, directory_index)
-    except Exception as error:
-        print(f"{Color.RED.value}[ERROR]: "
-              f"{Color.YELLOW.value}(reading_index) "
-              f"{Color.RST.value}{error}")
-        sys.exit(1)
+    cache_hits: int = 0
+    cache_misses: int = 0
 
     for query in tqdm(dataset.rag_questions,
                       desc="Searching",
                       unit="question",
                       colour="green",
                       dynamic_ncols=True):
+        key: str = generate_cache_key(query.question, k)
+        list_dict_struct = load_cache(cache_directory, key)
 
-        try:
-            list_dict_struct: list[dict[str, str | int | float]] = search(
-                chunk_info, query.question, retriever, k)
-        except Exception as error:
-            print(f"{Color.RED.value}[ERROR]: "
-                  f"{Color.YELLOW.value}(search_index) "
-                  f"{Color.RST.value}{error}")
-            sys.exit(1)
+        if list_dict_struct is None:
+            cache_misses += 1
+
+            if retriever is None:
+                try:
+                    file_info: str = str(
+                        Path(directory_info_index) / file_info_index)
+                    retriever, chunk_info = load_index(
+                        file_info, directory_index)
+                except Exception as error:
+                    print(f"{Color.RED.value}[ERROR]: "
+                          f"{Color.YELLOW.value}(reading_index) "
+                          f"{Color.RST.value}{error}")
+                    sys.exit(1)
+
+            try:
+                list_dict_struct = search(
+                    chunk_info, query.question, retriever, k)
+            except Exception as error:
+                print(f"\n{Color.RED.value}[ERROR]: "
+                      f"{Color.YELLOW.value}(search_index) "
+                      f"{Color.RST.value}{error}")
+                sys.exit(1)
+
+            try:
+                save_cache(cache_directory, key, list_dict_struct)
+            except Exception as error:
+                print(f"{Color.ORANGE.value}[WARNING]: "
+                      f"{Color.YELLOW.value}(save_cache) "
+                      f"{Color.RST.value}{error}")
+
+        else:
+            cache_hits += 1
 
         search_results: MinimalSearchResults = MinimalSearchResults(
             question_id=query.question_id,
             question=query.question,
             retrieved_sources=build_minimal_sources(list_dict_struct)
         )
-
         lst_search_results.append(search_results)
+
     student_search_results: StudentSearchResults = StudentSearchResults(
         search_results=lst_search_results,
         k=k
@@ -214,6 +280,18 @@ def start_search_dataset(dataset_path: str, k: int = 5,
         student_search_results.model_dump_json(indent=2),
         encoding="utf-8"
     )
+
+    if debug:
+        print(f"{Color.CYAN.value}[INFO]: "
+              f"{Color.GREEN.value}(CACHING) "
+              f"{Color.MAGENTA.value}[{Color.RST.value}{cache_hits}"
+              f"{Color.MAGENTA.value}] {Color.RST.value}cached file.")
+
+        print(f"{Color.CYAN.value}[INFO]: "
+              f"{Color.YELLOW.value}(ALREADY IN CACHING): "
+              f"{Color.MAGENTA.value}[{Color.RST.value}{cache_misses}"
+              f"{Color.MAGENTA.value}] {Color.RST.value}files already "
+              "in cache.")
 
 
 def answer(query: str,
@@ -473,12 +551,12 @@ def start_search(
     return None
 
 
-def start_indexation(
-    max_chunk_size: int = 2000,
-    chunk_overlap_percent: int = 15,
-    source_path: str = "data/raw/vllm-0.10.1",
-    processed_directory: str = "data/processed"
-) -> None:
+def start_indexation(max_chunk_size: int = 2000,
+                     chunk_overlap_percent: int = 15,
+                     source_path: str = "data/raw/vllm-0.10.1",
+                     processed_directory: str = "data/processed",
+                     debug: bool = False) -> None:
+
     """Build and save the BM25 index from the vLLM source files.
 
     Args:
@@ -497,4 +575,4 @@ def start_indexation(
 
     run_indexation(path, max_chunk_size, chunk_overlap_percent,
                    directory_info_index, file_info_index,
-                   directory_index)
+                   directory_index, debug)

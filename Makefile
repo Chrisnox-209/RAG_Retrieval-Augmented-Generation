@@ -42,7 +42,8 @@ source_path = data/raw/vllm-0.10.1
 processed_directory = data/processed
 
 # ## Option
-verbose = False
+verbose = True
+debug = True
 
 # ### search
 dataset_path_docs = data/datasets/UnansweredQuestions/dataset_docs_public.json
@@ -66,18 +67,21 @@ index:
 		--max_chunk_size ${max_chunk_size} \
 		--chunk_overlap_percent ${chunk_overlap_percent} \
 		--source_path $(source_path) \
-		--processed_directory $(processed_directory)
+		--processed_directory $(processed_directory) \
+		--debug $(debug)
 
 search:
 	@uv run python3 -m src search_dataset \
 		--dataset_path $(dataset_path_docs) \
 		--k $(K) \
-		--save_directory $(save_directory_search)
+		--save_directory $(save_directory_search) \
+		--debug $(debug)
 
 	@uv run python3 -m src search_dataset \
 		--dataset_path $(dataset_path_code) \
 		--k $(K) \
-		--save_directory $(save_directory_search)
+		--save_directory $(save_directory_search) \
+		--debug $(debug)
 
 moulinette:
 	@echo "\n====== DOCS ======"
